@@ -46,10 +46,10 @@ function umbel(p, view){
 }
 function hydrateUmbels(){}
 '''
-cut("/* umbels are shown as 3D stills.", "function artCaption(p){", UMBEL)
+cut("/* umbels are shown as 3D stills.", "  requestAnimationFrame(step);\n}\n", UMBEL, keep_end=False)   # through the end of hydrateUmbels
 
 # 4. the reference photos (builder only)
-i = h.find("const PHOTOS = {"); assert i >= 0
+i = h.find("const PHOTOS = "); assert i >= 0, "PHOTOS not found"
 h = h[:i] + h[h.find("\n", i) + 1:]
 
 # 5. the builder and the database
