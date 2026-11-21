@@ -23,3 +23,7 @@ Four pictures per plant, all transparent:
 | `<plant>-hero.png` | 1400 | the umbel behind the name |
 | `<plant>-bloom.png` | 520 | the Bloom tile |
 | `<plant>-leaf.png` | 760 | the Leaves tile |
+
+## Skipping the compression step
+
+`stills-raw.sha256` lists the checksums of the last bake's raw renders, before compression. After baking to a scratch folder, run `cd <scratch> && sha256sum -c ../_build/stills-raw.sha256`. If every file matches and the list of plants is the same, the pictures haven't changed: keep `stills/` as it is. If anything differs, compress the new bake, replace `stills/`, and rewrite `stills-raw.sha256`.
