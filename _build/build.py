@@ -38,9 +38,11 @@ const stillImg = (cls, src, px, label, lazy) => `<img class="${cls}" src="${src}
 function umbel(p, view){
   const label = "Umbel of flowers in the colors of " + p.name, s = "stills/" + slug(p.name);
   if(view === "three"){
-    /* behind the name, the umbel casts two identical soft shadows: the first multiplies, the second overlays it */
-    const src = s + "-hero.png";
-    return stillImg("nu-sh nu-mul", src, 1400, null, false) + stillImg("nu-sh nu-ovl", src, 1400, null, false) + stillImg("art art3d", src, 1400, label, false);
+    /* behind the name, the umbel casts two identical soft shadows: the first multiplies, the second overlays it.
+       Each is the shared grain masked by the umbel's baked, blurred shape (see bake_shadows.py); all three fade in
+       together once the umbel has loaded */
+    const sh = k => `<i class="nu-sh ${k}" aria-hidden="true"><b style="--m:url(${s}-shade.png)"></b></i>`;
+    return sh("nu-mul") + sh("nu-ovl") + `<img class="art art3d" src="${s}-hero.png" width="1400" height="1400" alt="${esc(label)}" decoding="async" fetchpriority="high" onload="this.parentNode.querySelectorAll('.nu-sh,.art').forEach(e=>e.classList.add('art-in'))">`;
   }
   return stillImg("art art3d", s + "-front.png", 720, label, true);
 }
@@ -82,6 +84,20 @@ h = h[:h.rfind("\n", 0, i) + 1] + h[h.find("\n", i) + 1:]
 
 # 8. styles: pictures are images now
 sub("canvas.art3d{display:block}", ".art3d{display:block}")
+# the name's shadow: the grain masked by the baked shade, at the filter's 10%, over the filter's region (150%, centered),
+# hidden until it fades in with the umbel. The SVG filter itself goes.
+sub("filter:url(#nu-shadow); -webkit-filter:url(#nu-shadow); ", "")
+sub(".nu-mul{mix-blend-mode:multiply}", ".nu-sh:not(.art-in){visibility:hidden}\n"
+    ".nu-sh b{position:absolute; inset:-25%; opacity:.1; background:url(stills/grain.png) 0 0/128px 128px;"
+    " -webkit-mask:var(--m) center/100% 100% no-repeat; mask:var(--m) center/100% 100% no-repeat}\n"
+    ".nu-mul{mix-blend-mode:multiply}")
+cut("<!-- the umbel shadow behind the hoya name", "</filter></svg>\n", keep_end=False)
+assert "#nu-shadow" not in h
+
+# 8b. a plant's design (and its accent color) is worked out once: the designs never change on this page
+sub("function specOf(p){ const sp = savedSpec(p); if(!sp.accentManual) sp.accent = autoAccent(sp, COLORS[p.name]); return sp; }",
+    "const SPEC_MEMO = new Map();\n"
+    "function specOf(p){ let sp = SPEC_MEMO.get(p.name); if(!sp){ sp = savedSpec(p); if(!sp.accentManual) sp.accent = autoAccent(sp, COLORS[p.name]); SPEC_MEMO.set(p.name, sp); } return Object.assign({}, sp); }")
 
 # 9. saved designs, written into the page
 ov = {d["plant"]: d for d in json.load(open(designs, encoding="utf-8"))}
@@ -91,5 +107,20 @@ sub("let OVERRIDES = {};", "let OVERRIDES = " + json.dumps(ov, separators=(",", 
 for gone in ("F3D.", "renderBuilder", "bindBuilder", "window.claude", "drawSpec(", "PHOTOS", "B.plant", "builder-link"):
     assert gone not in h, f"still referenced: {gone}"
 
+open(dst, "w", encoding="utf-8").write(h)
+
+# 10. the soil drawing: the same for every plant (a fixed seed), but slow to place grain by grain, so it is drawn once
+# here and written into the page
+import functools, http.server, os, threading
+from playwright.sync_api import sync_playwright
+Hd = functools.partial(http.server.SimpleHTTPRequestHandler, directory=os.path.dirname(os.path.abspath(dst))); Hd.log_message = lambda *a: None
+srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Hd); threading.Thread(target=srv.serve_forever, daemon=True).start()
+with sync_playwright() as pw:
+    b = pw.chromium.launch(executable_path="/usr/bin/google-chrome"); pg = b.new_page()
+    pg.goto(f"http://127.0.0.1:{srv.server_port}/{os.path.basename(dst)}#"); pg.wait_for_function("typeof soilPot === 'function'")
+    soil = pg.evaluate("() => { SOIL_SVG = ''; return soilPot(); }"); b.close()
+srv.shutdown()
+assert soil.startswith("<svg"), "soil drawing failed"
+sub('let SOIL_SVG = "";', "let SOIL_SVG = " + json.dumps(soil, ensure_ascii=False) + ";")
 open(dst, "w", encoding="utf-8").write(h)
 print(f"{len(open(src, encoding='utf-8').read())//1024} KB -> {len(h)//1024} KB")
