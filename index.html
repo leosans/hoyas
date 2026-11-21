@@ -6125,7 +6125,20 @@ async function resetDesign(){
 /* storage: saved designs live in the site's own database, readable by every visitor */
 (async () => {
   try{
-    if(!window.claude || !window.claude.use) { DB_READY = true; if(B.plant) updateStatus(); return; }
+    if(!window.claude || !window.claude.use) {
+      /* published copy (GitHub Pages): saved designs come from a read-only snapshot, flowers.json */
+      try{
+        const list = await fetch("flowers.json", {cache:"no-cache"}).then(r => r.ok ? r.json() : []);
+        const next = {}; (list || []).forEach(v => { if(v && v.plant) next[v.plant] = v; });
+        if(Object.keys(next).length){
+          OVERRIDES = next;
+          const id = location.hash.slice(1);
+          if(id.startsWith("build") && B.plant){ B.saved = specOf(B.plant); B.spec = Object.assign({}, B.saved); syncControls(); drawBuilder(); }
+          else route(true);
+        }
+      }catch(e){}
+      DB_READY = true; if(B.plant) updateStatus(); return;
+    }
     const timer = setTimeout(() => { DB_READY = true; if(B.plant) updateStatus(); }, 10000);
     const db = await window.claude.use("db");
     DB = db; DB_READY = true;
