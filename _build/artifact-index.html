@@ -6,6 +6,9 @@
 <title>Hoya Collection</title>
 <link rel="preload" href="fonts/clash-grotesk-var.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* the mono's capital I has slab serifs; this swaps in just the plain capital I from Inter (variable weight, so it
+   matches every weight). Inter: Copyright 2016 The Inter Project Authors, SIL Open Font License 1.1 */
+@font-face{font-family:"Inter I"; src:url(data:font/woff2;base64,d09GMgABAAAAAAPYABUAAAAACFwAAANrAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhQbIBwqP0hWQVJEP01WQVJeBmA/U1RBVIFOJyYANC9sEQgKHDwwQAE2AiQDCAsGAAQgBYVsByAMBxsMBwguBnIymlcii6mT04T/t3JqW/EiU/8pnoffH/+tfe79tKroieMkJgARQsh/6ns+tV97+3FNnCT81BCR/NX30KaZEhky04kaNTKESCjwPO18n8I4kUzSvCjZzmewgfD6v5ASMjjkyGMJNAj8oNKCAK7Jj88P+H/fa7GhZXkCNY7XhrPpQNoSJNrnA6XRQ21qJODUwSIORwlPhh+6QNAakDyMlnobQhYvXdtDoxoaAUweahgzXfvhHdTCIH5YCOgM5gIgaC3ojSgf+xjMNwUFBfllLKAEApprYvJVz/4voe7rA5w5gi2k2wc4v2W6B6Da8qn57Vi19W+mCU0m1V/ioW4oX7qzPO5UmlSgqBEAWDnWd/FoheXycUNHaP5nOQL11ibfob9WEc1V6KwFozHHjvtnZDqcWwolQQ6cZg0yH6OrsEl5Cw5wLGdu3C8oyWlHhIwjTIz3xJYTMhpUoii5pbwPUpuU28Hksh5Gp1CmVv2hNK2642Q4t5kGBAHRzOxZaf1lq9pD3VoO3at7Jk0a/8x8U0BBhc5qBJ3V6g9qtWDFrwU0vi0wrz1GdNakuaO/BAFyL9UdkJAI2A0ZDz4hEyCjIRMh95JJkNtkMpT1kClQ3idToeoPmQbVHYg0UkEBNYIarQA1IPX5heZL3YZ8p8l3Hz6uQOr0xPRPATo9RXtN131M6yfMhybPvJMn+75BVQjDTLnI8/2moLbwu2PEEXfM/r951Qj47yz3rm0fbcj7d362+c+oFBB+XbHLjcRtnKRcsjSZyvIy1IOg2KjZRnUCACpBlxRUUjeBe5mIlu6laOshKuPdUevpmyam+lOa6pnhLoSgdWaIaMwGUb1ZS0xzNOLaPURCayhJnblOSmNuSevOA2Q0556swbxOTmPemNKadyeZ1pwfi9gcpzwqmYIKiouKSQvaoxAFLbNQIk/QFo9NI+JRQdOqKIXN4wsapqAohy8vIkKmohRVnEk8mynC4zP5IlTJ6Ihwkx0iWZWB5UmaFL3v24Idu9btKqxJE98SIJhg5iBm+1Q2S1AQvbg0If3yTsrgRXG9CmuHRIdhb0aVZd5J08NaI4nhJOtEAlWVaZfIpJphMwiZOFQAItpdebpNDkrFYxmCdqnOiGKSIS2jYZjZsf4zlqUGaHjGnUrn22ns5fouAAAA) format("woff2"); font-weight:100 900; unicode-range:U+0049}
 /* fonts are bundled with the site, so they always load */
 @font-face{font-family:"Clash Grotesk";src:url(fonts/clash-grotesk-var.woff2) format("woff2");font-weight:200 700;font-display:swap}
 @font-face{font-family:"Schibsted Grotesk";src:url(fonts/schibsted-grotesk-latin-wght-normal.woff2) format("woff2");font-weight:400 900;font-display:swap}
@@ -15,7 +18,7 @@
   --sunk:#F3F3F3; --husk:#2F2A27;
   --display:"Clash Grotesk","Helvetica Neue",Arial,sans-serif;
   --body:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
-  --mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --mono:"Inter I","SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
   --r:21.6px; --gap:6px;
   --tb:#000000; --tm:46%;   /* titles: a very dark version of the flower color (mixed in OKLCH) */
   --ease:cubic-bezier(.22,.61,.36,1);
@@ -45,7 +48,8 @@ a{color:inherit}
 
 /* top bar */
 .bar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:var(--gap)}
-.brand{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:8px; transition:color .3s var(--ease)}
+.brand{font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-decoration:none; display:flex; align-items:center; gap:8px; transition:color .3s var(--ease), opacity .3s var(--ease)}
+body[data-page="home"] .brand{opacity:0; pointer-events:none}   /* the home page already has the title in its big box; the link keeps its place so the buttons stay put */
 .brand:hover{color:var(--ink)}
 .dot{width:8px; height:8px; border-radius:50%; background:var(--signal); transition:background-color .45s var(--ease)}
 .bar-actions{display:flex; gap:8px; align-items:center}
@@ -56,7 +60,7 @@ a{color:inherit}
 }
 .btn:hover{transform:scale(1.03); border-color:var(--muted)}
 .btn:active{transform:scale(.98)}
-.btn:focus-visible,.tile-link:focus-visible,input:focus-visible,.seg button:focus-visible,.spec a:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
+.btn:focus-visible,.tile-link:focus-visible,input:focus-visible,.seg button:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
 .btn .sf{font-size:14px}
 /* icons (inline SVG) */
 .sf{display:inline-block; flex:none; height:1em; vertical-align:-.1445em; overflow:visible}   /* inline SVG icons: 1em tall, baseline where the font had it, so they sit like the glyphs did */
@@ -79,20 +83,26 @@ a{color:inherit}
 .hero h1{
   font-family:var(--display); font-weight:700; font-size:clamp(64px,14vw,200px);
   line-height:.88; letter-spacing:-.025em; margin:0; text-wrap:balance; overflow-wrap:normal; word-break:keep-all;
+  color:color-mix(in oklch, var(--day-tint, var(--tb)) calc(var(--tm) * .65), var(--tb)); transition:color .45s var(--ease);   /* faintly tinted with one of the day's colors */
 }
-.hero{display:flex; flex-direction:column; justify-content:space-between; gap:28px; min-height:340px}
+/* the collection box: a very soft mesh of five flower colors, a new set and arrangement every day (dayGradient) */
+.hero{display:flex; flex-direction:column; justify-content:space-between; gap:28px; min-height:340px;
+  background-color:var(--tile); background-image:var(--day-bg, none); isolation:isolate}
+/* a fine multicolored grain over the gradient: each channel of the noise varies on its own. Blended as overlay it
+   shows in the colors and all but vanishes where the box is near white */
+.hero::before{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; mix-blend-mode:overlay; opacity:.12;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='2.2 0 0 0 -.6  0 2.2 0 0 -.6  0 0 2.2 0 -.6  0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+/* a 1px inside outline: black at 5% blended color burn in light mode, white at 10% blended soft light in dark mode */
+.hero::after{content:""; position:absolute; inset:0; border-radius:inherit; corner-shape:inherit; pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgb(var(--hero-line, 0 0 0) / var(--hero-line-a, .05)); mix-blend-mode:color-burn}
+:root[data-theme="dark"] .hero::after{--hero-line:255 255 255; --hero-line-a:.1; mix-blend-mode:soft-light}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .hero::after{--hero-line:255 255 255; --hero-line-a:.1; mix-blend-mode:soft-light} }
 .hero-foot{display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap}
 .hero-foot p{margin:0}
 .hero p{margin:18px 0 0; color:var(--muted); max-width:46ch; transition:color .45s var(--ease)}
+:root[data-theme="dark"] .hero p{color:color-mix(in oklch, var(--muted) 72%, #FFFFFF)}   /* a little lighter over the gradient in dark mode */
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .hero p{color:color-mix(in oklch, var(--muted) 72%, #FFFFFF)} }
 
-/* spectrum */
-.spec{display:flex; gap:3px; height:76px; align-items:stretch}
-.spec a{
-  flex:1 1 0; border-radius:6px; min-width:0; display:block; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
-  transition:flex-grow .35s var(--ease), transform .35s var(--ease), opacity .35s var(--ease);
-}
-.spec:hover a{opacity:.55}
-.spec a:hover{flex-grow:5; opacity:1}
 
 /* controls */
 .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between}
@@ -120,7 +130,7 @@ a{color:inherit}
 .tile-link:hover .segs i.on{opacity:1}
 .tile-link:hover .art{filter:brightness(1.5) saturate(.85); opacity:1}
 .tile-link .art{width:72px; height:72px; transition:filter .35s var(--ease), opacity .35s var(--ease)}
-.swatch{width:100%; height:6px; border-radius:3px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); background:var(--c, var(--line)); transition:background-color .45s var(--ease), opacity .3s var(--ease)}
+.swatch{width:100%; height:6px; border-radius:999px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); background:var(--c, var(--line)); transition:background-color .45s var(--ease), opacity .3s var(--ease)}
 .tile-link:hover .swatch{opacity:0}
 .tile-link h3{font-family:var(--display); font-weight:700; font-size:28px; line-height:1.02; margin:0; letter-spacing:-.005em; overflow-wrap:normal; word-break:keep-all}
 .tile-link .meta{margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; gap:8px}
@@ -132,6 +142,12 @@ a{color:inherit}
 /* status as an icon: a potted plant for growing plants, a skull for lost ones, with no outline */
 .pill.status{display:inline-grid; place-items:center; width:auto; height:auto; padding:0; border:0}
 .pill.status .sf{font-size:20px}
+/* in the hoya boxes the status icon is a little smaller, and it and the origin are tinted with the flower color:
+   alive like the name, lost and the origin like muted text */
+.tile-link .pill.status .sf{font-size:17px}
+.tile-link .pill.alive{color:color-mix(in oklch, var(--hue) var(--tm), var(--tb))}
+.tile-link .pill.dead, .tile-link .origin-mini{color:color-mix(in oklch, var(--hue) 45%, var(--muted))}
+.tile-link:hover .pill.status{color:inherit}
 .segs{display:flex; gap:3px}
 .segs i{width:10px; height:4px; border-radius:2px; background:var(--line); transition:background-color .45s var(--ease), opacity .3s var(--ease)}
 .segs i.on{background:var(--ink)}
@@ -170,6 +186,29 @@ a{color:inherit}
 .stats.s12 > .tile{min-height:164px}
 @media (max-width:900px){ .stats.s12{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .stats .tile{padding:18px; display:flex; flex-direction:column; min-height:0; container-type:inline-size}
+/* the scent ribbon runs edge to edge across the box, behind its text: multiplied on the light tiles, glowing (screen) on the dark */
+.scent-face{isolation:isolate}
+.scent-face > :not(.scent-ribbon):not(.oc-btn){position:relative; z-index:1}
+.scent-face > .oc-btn{z-index:2}
+.scent-ribbon{position:absolute; left:0; right:0; top:16%; width:100%; height:50%; z-index:0; pointer-events:none; mix-blend-mode:multiply}
+.scent-ribbon .sr-core{fill:#FFFFFF; opacity:.9}
+/* each layer blends its own way, for a glassy, lit-from-within look: the first two strands lay down the body, the rest
+   deepen where they cross (light) or add light (dark), the rainbow fringe burns in (light) or dodges up (dark), and the
+   core is pure added light */
+.scent-ribbon .sr-glow{mix-blend-mode:multiply}
+.scent-ribbon .sr-spec{mix-blend-mode:color-burn; opacity:.5}
+.scent-ribbon .sr-core{mix-blend-mode:soft-light; opacity:1}
+:root[data-theme="dark"] .scent-ribbon .sr-glow{mix-blend-mode:screen}
+:root[data-theme="dark"] .scent-ribbon .sr-spec{mix-blend-mode:color-dodge; opacity:.7}
+:root[data-theme="dark"] .scent-ribbon .sr-core{mix-blend-mode:plus-lighter; opacity:.85}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .scent-ribbon .sr-glow{mix-blend-mode:screen}
+  :root:not([data-theme="light"]) .scent-ribbon .sr-spec{mix-blend-mode:color-dodge; opacity:.7}
+  :root:not([data-theme="light"]) .scent-ribbon .sr-core{mix-blend-mode:plus-lighter; opacity:.85}
+}
+:root[data-theme="dark"] .scent-ribbon{mix-blend-mode:screen}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .scent-ribbon{mix-blend-mode:screen} }
+.scent-face > .word{margin-top:auto}
 .stats .tile > .label + *, .stats .tile > .stat-ico + *, .stats .tile > .stat-unit + *{margin-top:auto}   /* icon at the top, the reading at the bottom */
 .stats .num{font-size:clamp(28px,26cqi,64px); white-space:nowrap}   /* sized to the tile, so ranges like 18–28 ºC always fit */
 .stats .word{font-size:clamp(24px,2.6vw,38px); line-height:1.02; overflow-wrap:anywhere}
@@ -203,9 +242,10 @@ a{color:inherit}
 .soil-key span{margin-left:auto; font-variant-numeric:tabular-nums}
 .bloom-tile{background:var(--acc-soft)}   /* tinted like the umbel tile */
 .bloom-3d{position:relative; aspect-ratio:1; width:100%}
+.bloom-tile:not(.leaf-tile) .bloom-3d{max-width:250px; justify-self:center; translate:0 -7%}   /* raised a little: the stalk below makes it read low */   /* keeps the bloom row a little shorter */
 .bloom-canvas{position:absolute; inset:0; width:100%; height:100%}
 @media (max-width:640px){ .bloom-body{grid-template-columns:1fr} .bloom-3d{max-width:280px; justify-self:center} }
-.art-tile{display:grid; place-items:center; background:var(--acc-soft); min-height:360px; overflow:hidden}
+.art-tile{display:grid; place-items:center; background:var(--acc-soft); min-height:300px; overflow:hidden}
 .art-tile .art{width:min(78%,260px); height:auto; aspect-ratio:1; scale:1.45}   /* drawn larger than its slot: the picture's empty margin overflows (clipped), the box keeps its size */
 .leaf-pair .bloom-canvas{scale:1.32}
 .leaf-tile .bloom-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}   /* two even columns: the stem and its leaves, and the notes */
@@ -234,22 +274,29 @@ a{color:inherit}
 .stat-ico{margin:0 0 10px; line-height:0}
 .stats .tile:has(.stat-unit) .stat-ico .fi{font-size:15px; line-height:15px}   /* temperature and humidity: the icon as tall as the unit line beside it */
 /* origin: a card that flips over, lifts and opens out to the full list of places */
-.stats .origin-tile{--oc-ease:cubic-bezier(.22, 1, .36, 1); padding:0; background:none; overflow:visible; perspective:1400px; z-index:1}
+.stats .origin-tile{--oc-ease:cubic-bezier(.77, 0, .175, 1); --oc-close:cubic-bezier(.35, 0, 0, 1); --oc-in:.5s; --oc-out:.5s; padding:0; background:none; overflow:visible; perspective:1400px; z-index:1}
 .stats .origin-tile.open{z-index:30}
 .oc{position:absolute; left:0; right:0; top:0; height:var(--oc-h, 100%); border-radius:var(--r); transform-style:preserve-3d;
-  transition:transform .7s var(--oc-ease), height .6s var(--oc-ease)}   /* eased out: quick to start, settling softly */
-.origin-tile.open .oc{transform:translateY(-8px) scale(1.03) rotateY(180deg)}
+  transition:transform var(--oc-out) var(--oc-close), height var(--oc-out) var(--oc-close)}   /* closing: it rushes through the middle, leaving a long, soft settle into place */
+/* the card is already on screen, so the flip, lift and growth ease in and out together: it gathers speed, passes edge-on
+   quickly and settles softly */
+.origin-tile.open .oc{transform:translateY(-8px) scale(1.03) rotateY(180deg); transition-duration:var(--oc-in); transition-timing-function:var(--oc-ease)}
 .oc-face{position:absolute; inset:0; padding:18px; display:flex; flex-direction:column; background:var(--tile); border-radius:var(--r); overflow:hidden;
-  -webkit-backface-visibility:hidden; backface-visibility:hidden; box-shadow:0 0 0 rgba(0,0,0,0); transition:background-color .45s var(--ease), box-shadow .6s var(--oc-ease)}
+  -webkit-backface-visibility:hidden; backface-visibility:hidden; box-shadow:0 0 0 rgba(0,0,0,0); transition:background-color .45s var(--ease), box-shadow var(--oc-out) var(--oc-close), opacity .2s var(--ease)}
 .oc-front > .stat-ico + *{margin-top:auto}
 .oc-front .word{margin-top:auto}
 .oc-back{transform:rotateY(180deg)}   /* in dark mode the back is a step lighter than the tiles (below) */
 :root[data-theme="dark"] .oc-back{background:color-mix(in oklch, var(--tile) 84%, #FFFFFF 16%)}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .oc-back{background:color-mix(in oklch, var(--tile) 84%, #FFFFFF 16%)} }
-.origin-tile.open .oc-face{box-shadow:0 20px 50px rgba(0,0,0,.12), 0 3px 10px rgba(0,0,0,.05)}
+.origin-tile.open .oc-face{box-shadow:0 20px 50px rgba(0,0,0,.12), 0 3px 10px rgba(0,0,0,.05); transition-duration:.45s, var(--oc-in), .2s; transition-timing-function:var(--ease), var(--oc-ease), var(--ease)}
+/* the places on the back settle in after the card: from about 60% of the flip, one after another 30ms apart (capped);
+   closing, they fade at once */
+.oc-list li, .oc-back .sub{opacity:0; transform:translateY(6px); transition:opacity .15s var(--ease), transform .15s var(--ease)}
+.origin-tile.open .oc-list li, .origin-tile.open .oc-back .sub{opacity:1; transform:none; transition:opacity .3s cubic-bezier(.23, 1, .32, 1), transform .3s cubic-bezier(.23, 1, .32, 1);
+  transition-delay:calc(.3s + min(var(--i, 0), 10) * 30ms)}
 .oc-btn{position:absolute; top:12px; right:12px; width:30px; height:30px; border-radius:50%; border:0; background:var(--sunk); color:color-mix(in oklch, var(--hue) var(--tm), var(--tb)); cursor:pointer;
   display:grid; place-items:center; transition:background-color .3s var(--ease), color .45s var(--ease), transform .25s var(--ease)}
-.oc-btn:hover{transform:scale(1.08)} .oc-btn:active{transform:scale(.94)}
+.oc-btn:hover{transform:scale(1.08)} .oc-btn:active{transform:scale(.97); transition-duration:.3s, .45s, .1s}
 .oc-btn i, .oc-btn i::before{display:block; width:12px; height:2px; border-radius:1px; background:currentColor}
 .oc-btn i{position:relative; transition:transform .45s var(--oc-ease, var(--ease))}
 .oc-btn i::before{content:""; position:absolute; inset:0; transform:rotate(90deg)}
@@ -466,7 +513,6 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
   #b-seg button{flex:1 1 auto; justify-content:center; white-space:nowrap}
   #b-seg .seg-thumb{bottom:auto}
     .s3{grid-column:span 12}
-  .spec{height:56px}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tile-link{min-height:190px}
   .tile-link h3{font-size:20px}
@@ -478,6 +524,12 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{transition-duration:.01ms !important}
+  /* the origin card: no flip, lift or growth; its two faces just crossfade */
+  .origin-tile.open .oc, .oc-back{transform:none}
+  .oc-back, .origin-tile.open .oc-front{opacity:0; pointer-events:none}
+  .origin-tile.open .oc-back{opacity:1; pointer-events:auto}
+  .oc-face{transition-duration:.2s !important}
+  .oc-list li, .oc-back .sub{transform:none !important; transition-delay:0s !important}
 }
 
 /* Apple-style continuous corners (corner smoothing). Each corner keeps the same visual radius: the curve
@@ -487,14 +539,12 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 @supports (corner-shape: squircle){
   .tile{border-radius:calc(var(--r) * 1.45); corner-shape:superellipse(1.62)}
   .oc, .oc-face{border-radius:calc(var(--r) * 1.45); corner-shape:superellipse(1.62)}   /* the origin card and both its faces match the other boxes */
-  .spec a{border-radius:8.7px; corner-shape:superellipse(1.62)}
   .links a{border-radius:20.3px; corner-shape:superellipse(1.62)}
   .swatch-ctl{border-radius:20.3px; corner-shape:superellipse(1.62)}
   .swatch-ctl i{border-radius:14.5px; corner-shape:superellipse(1.62)}
   .picker{border-radius:26.1px; corner-shape:superellipse(1.62)}
   .pk-chip{border-radius:23.2px; corner-shape:superellipse(1.62)}
   .segs i{border-radius:2.9px; corner-shape:superellipse(1.62)}
-  .swatch{border-radius:4.4px; corner-shape:superellipse(1.62)}
   /* pills: each end keeps its full half-height curve, and the smoothing eases in along the straight sides
      over 1.08x that, much less than the tiles, as Figma does with smoothing on a pill (horizontal radius / vertical radius) */
   .btn{border-radius:23.9px / 50%; corner-shape:superellipse(1.15)}   /* 44px tall, like the search fields and segmented controls */
@@ -544,6 +594,13 @@ body:not([data-page="home"]) .brand .back{display:inline-block}
 <body>
 <!-- range meters: blur the track and the range together, then sharpen the edge again, so they join with smooth
      inward curves and their colors blend where they meet -->
+<!-- the scent ribbon's soft edges -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="sr-blur" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="5 3.4"/></filter>
+  <linearGradient id="sr-spec" x1="0" x2="1" y1="0" y2="0"><stop offset=".1" stop-color="#FF6A5C"/><stop offset=".3" stop-color="#FFC94D"/><stop offset=".5" stop-color="#7BE38A"/><stop offset=".7" stop-color="#5CB8FF"/><stop offset=".9" stop-color="#B07CFF"/></linearGradient>
+  <filter id="sr-soft" x="-10%" y="-200%" width="120%" height="500%"><feGaussianBlur stdDeviation="2.1 1.5"/></filter>
+  <filter id="sr-fringe" x="-10%" y="-200%" width="120%" height="500%"><feGaussianBlur stdDeviation="3 2.2"/></filter>
+</svg>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="meter-goo" x="-4%" y="-60%" width="108%" height="220%" color-interpolation-filters="sRGB">
   <feGaussianBlur in="SourceGraphic" stdDeviation="2.2"/>
   <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -12"/>
@@ -2120,20 +2177,6 @@ const DATA = [
   "leaves": "Large, thick and leathery leaves, up to about 27 cm, with a strong midrib and slightly wavy edges."
  },
  {
-  "name": "Kenejiana",
-  "light": "",
-  "water": "",
-  "soil": "",
-  "bloom": "Buttery yellow flowers, prolific once established",
-  "care": "Needs extra warmth and humidity",
-  "origin": "Papua New Guinea",
-  "status": "Dead",
-  "photo": "https://i0.wp.com/vermonthoyas.com/vhwp/wp-content/uploads/2011/01/DSCF0743-1.jpg",
-  "source": "https://vermonthoyas.com/hoyas-i-k/hoya-kenejiana/",
-  "sourceLabel": "Vermont Hoyas page",
-  "leaves": "Thick, lance-shaped leaves, oval and often a little distorted."
- },
- {
   "name": "Meliflua ssp. Meliflua",
   "light": "Bloomed only under grow lights in a tent",
   "water": "",
@@ -2224,7 +2267,6 @@ const COLORS = {
  "Erythrostemma Pink": "#ECB8D0",
  "Elliptica": "#F4F0E8",
  "Odorata": "#F5F4EE",
- "Kenejiana": "#EFD862",
  "Quinquenervia": "#EDD58C",
  "Carnosa": "#EEEAF0",
  "Ilagiorum": "#D8352A",
@@ -2559,16 +2601,7 @@ const GRAD = {
    "#F7E8A0"
   ]
  },
- "Kenejiana": {
-  "outer": [
-   "#F7E58A",
-   "#EDD45A"
-  ],
-  "inner": [
-   "#F3D24A",
-   "#FBEFA8"
-  ]
- },
+
  "Quinquenervia": {
   "outer": [
    "#F5E4A8",
@@ -3279,6 +3312,40 @@ function scent(p){
 }
 const filled = p => FIELDS.filter(([k]) => p[k] && p[k].trim()).length;
 
+/* the scent box's ribbon of light: a few soft, wavy strands that run from one side of the box to the other, pinched at
+   both ends and widest in the middle, in colors that suit the scent, with a bright core like light through glass.
+   The shapes come from the plant's name, so each hoya keeps its own */
+const SCENT_COLORS = {
+  vanilla:["#F3DFA6","#E8C17E","#FFF4D6"], chocolate:["#7A4027","#B5713F","#E2A86E"], honey:["#F2B033","#F8D45C","#E58A1C"],
+  caramel:["#C97A2E","#E9A54F","#F6D08E"], butterscotch:["#E39B3A","#F4C46A","#C9772C"], lemon:["#F4E04D","#C6E05A","#FFF39A"],
+  citric:["#F2D43C","#A9D85B","#FFB347"], gardenia:["#F7F1DC","#E3EDC6","#FFFFFF"], jasmine:["#FFF6DE","#F1E7B6","#D9EBC4"],
+  "orange-blossom":["#FFB067","#FFE9CC","#F6CB7E"], spicy:["#D9572A","#A8322C","#F29B4A"], musky:["#8E6C88","#B99BAA","#6F5B52"],
+  sweet:["#F4A3C0","#F8CFE0","#D9B0F0"], fragrant:["#F2B3D2","#C9B6F2","#FFE2A3"], unpleasant:["#8C9A3A","#6B5A2C","#B5A75A"],
+  none:["#C9C9C9","#E2E2E2","#AFAFAF"]
+};
+function scentRibbon(p, sc){
+  const t = (p.bloom + " " + p.care).toLowerCase(), w = sc.word.toLowerCase().replace(" ", "-");
+  const keys = Object.keys(SCENT_COLORS).filter(k => k !== w && t.includes(k)), cols = [...(SCENT_COLORS[w] || SCENT_COLORS.fragrant)];
+  keys.forEach(k => cols.splice(1, 0, SCENT_COLORS[k][0]));                     /* a second scent mixes its color in */
+  let s = hash(p.name) || 1; const rnd = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
+  const W = 300, H = 100, f = v => v.toFixed(1), out = [];
+  /* one strand: a centre line that waves across, and a thickness that swells in the middle and pinches to nothing at the sides */
+  const strand = (amp, ph, fr, thick, dy) => { const top = [], bot = [];
+    for(let i=0;i<=40;i++){ const x = i/40, y = H/2 + dy + amp*Math.sin(ph + x*Math.PI*fr) * Math.sin(x*Math.PI), th = thick*Math.pow(Math.sin(x*Math.PI), 1.6);
+      top.push(f(x*W) + " " + f(y - th)); bot.unshift(f(x*W) + " " + f(y + th)); }
+    return "M" + top.join("L") + "L" + bot.join("L") + "Z"; };
+  const n = Math.min(5, cols.length + 1);
+  for(let i=0;i<n;i++){
+    const c = cols[i % cols.length], amp = 9 + rnd()*14, ph = rnd()*Math.PI*2, fr = 1.2 + rnd()*1.6, th = 7 + rnd()*9, dy = (rnd() - .5)*8;
+    out.push(`<path class="${i < 2 ? "sr-body" : "sr-glow"}" d="${strand(amp, ph, fr, th, dy)}" fill="${c}" opacity="${((.55 + rnd()*.35) * (i < 2 ? .68 : 1)).toFixed(2)}" filter="url(#sr-blur)"/>`);
+  }
+  /* a faint rainbow fringe, as light splits through glass */
+  out.push(`<path d="${strand(10 + rnd()*8, rnd()*Math.PI*2, 1.8, 3.2, (rnd() - .5)*6)}" class="sr-spec" fill="url(#sr-spec)" filter="url(#sr-fringe)"/>`);
+  /* the bright core: a thin streak across the middle */
+  out.push(`<path class="sr-core" d="${strand(8 + rnd()*6, rnd()*Math.PI*2, 1.6, 1.6, 0)}" filter="url(#sr-soft)"/>`);
+  return `<svg class="scent-ribbon" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${out.join("")}</svg>`;
+}
+
 /* flower count and size, read from the bloom and care notes */
 function flowerInfo(p){
   const t = (p.bloom + " \n " + p.care).toLowerCase();
@@ -3324,9 +3391,9 @@ function flowerInfo(p){
 
 /* flower shape: round (bell or cup), fat, standard or thin (reflexed).
    Set a plant here to override what the notes say. */
-const SHAPES = {"Densifolia": "standard", "Griffithii": "thin", "Coronaria Pink": "fat", "Verticillata": "standard", "Micrantha": "fat", "Pubicalyx Red Button": "standard", "Mindorensis Yellow": "standard", "Guppyi": "fat", "Forbesii": "standard", "Celata": "standard", "Retusa": "fat", "Enduaensis": "round", "Rubida": "standard", "Archboldiana": "round", "Curtisii": "thin", "Cinnamomifolia Purpureofusca": "fat", "Cinnamomifolia": "fat", "Memoria": "round", "Sarawak": "standard", "Blashernaezii ssp. Valmayoriana": "thin", "Surigaoensis": "standard", "Globulosa": "standard", "Lauterbachii": "round", "Imperialis Pink": "thin", "Erythrostemma Pink": "thin", "Elliptica": "standard", "Odorata": "thin", "Kenejiana": "fat", "Quinquenervia": "thin", "Carnosa": "standard", "Ilagiorum": "fat", "Macgilivrayii": "fat", "Platycaulis": "thin", "Serpens": "fat", "Chlorantha": "fat", "Albiflora": "thin", "Imperialis Red": "thin", "Australis": "standard", "Patricia": "fat", "Engleriana": "standard", "Myrmecopa": "thin", "Rotundiflora": "round", "Thomsonii": "standard", "Balaensis": "standard", "Meliflua ssp. Meliflua": "round", "Erythrostemma Pink Corona": "thin", "Imbricata Maxima": "fat", "Soligamiana": "fat", "Bella": "standard", "Sigillatis": "round", "Lobbii Dark Red": "standard", "Fitchii": "standard", "Multiflora Javanica Thai": "thin", "Blashernaezii ssp. Siariae Yellow Pink": "round", "Kanyakumariana": "standard", "Praetorii": "thin", "Alagensis": "fat", "Blashernaezii ssp. Siariae Red": "round", "Ischnopus": "fat", "Stoneana": "standard", "Hypolasia": "thin", "Pubicalyx Pink Dragon": "standard", "Mindorensis Purple": "standard", "Camphorifolia": "standard", "Pimenteliana": "thin", "Coronaria White": "fat", "Cutis-porcelana": "thin", "Davidcummingii": "fat", "Globulifera": "fat", "Polyneura": "standard", "Burtoniae": "round", "Campanulata": "round", "Lamingtoniae": "standard", "Pallilimba": "round", "Diversifolia": "fat", "Blashernaezii": "round", "Cv Ruthie": "fat", "Samoensis": "standard", "Erythrina": "fat", "Mindorensis Pink": "standard", "Affinis": "fat", "Pauciflora": "fat", "Linearis": "standard", "Shepherdii": "standard", "Decipulae": "thin"};
+const SHAPES = {"Densifolia": "standard", "Griffithii": "thin", "Coronaria Pink": "fat", "Verticillata": "standard", "Micrantha": "fat", "Pubicalyx Red Button": "standard", "Mindorensis Yellow": "standard", "Guppyi": "fat", "Forbesii": "standard", "Celata": "standard", "Retusa": "fat", "Enduaensis": "round", "Rubida": "standard", "Archboldiana": "round", "Curtisii": "thin", "Cinnamomifolia Purpureofusca": "fat", "Cinnamomifolia": "fat", "Memoria": "round", "Sarawak": "standard", "Blashernaezii ssp. Valmayoriana": "thin", "Surigaoensis": "standard", "Globulosa": "standard", "Lauterbachii": "round", "Imperialis Pink": "thin", "Erythrostemma Pink": "thin", "Elliptica": "standard", "Odorata": "thin", "Quinquenervia": "thin", "Carnosa": "standard", "Ilagiorum": "fat", "Macgilivrayii": "fat", "Platycaulis": "thin", "Serpens": "fat", "Chlorantha": "fat", "Albiflora": "thin", "Imperialis Red": "thin", "Australis": "standard", "Patricia": "fat", "Engleriana": "standard", "Myrmecopa": "thin", "Rotundiflora": "round", "Thomsonii": "standard", "Balaensis": "standard", "Meliflua ssp. Meliflua": "round", "Erythrostemma Pink Corona": "thin", "Imbricata Maxima": "fat", "Soligamiana": "fat", "Bella": "standard", "Sigillatis": "round", "Lobbii Dark Red": "standard", "Fitchii": "standard", "Multiflora Javanica Thai": "thin", "Blashernaezii ssp. Siariae Yellow Pink": "round", "Kanyakumariana": "standard", "Praetorii": "thin", "Alagensis": "fat", "Blashernaezii ssp. Siariae Red": "round", "Ischnopus": "fat", "Stoneana": "standard", "Hypolasia": "thin", "Pubicalyx Pink Dragon": "standard", "Mindorensis Purple": "standard", "Camphorifolia": "standard", "Pimenteliana": "thin", "Coronaria White": "fat", "Cutis-porcelana": "thin", "Davidcummingii": "fat", "Globulifera": "fat", "Polyneura": "standard", "Burtoniae": "round", "Campanulata": "round", "Lamingtoniae": "standard", "Pallilimba": "round", "Diversifolia": "fat", "Blashernaezii": "round", "Cv Ruthie": "fat", "Samoensis": "standard", "Erythrina": "fat", "Mindorensis Pink": "standard", "Affinis": "fat", "Pauciflora": "fat", "Linearis": "standard", "Shepherdii": "standard", "Decipulae": "thin"};
 /* the hoyas with a reference photo, each at photos/<slug>.jpg (shown in the flower builder) */
-const PHOTOS = new Set(["Densifolia", "Griffithii", "Coronaria Pink", "Verticillata", "Micrantha", "Pubicalyx Red Button", "Mindorensis Yellow", "Guppyi", "Forbesii", "Celata", "Retusa", "Enduaensis", "Rubida", "Archboldiana", "Curtisii", "Cinnamomifolia Purpureofusca", "Cinnamomifolia", "Memoria", "Sarawak", "Blashernaezii ssp. Valmayoriana", "Surigaoensis", "Globulosa", "Lauterbachii", "Imperialis Pink", "Erythrostemma Pink", "Elliptica", "Odorata", "Kenejiana", "Quinquenervia", "Carnosa", "Ilagiorum", "Macgilivrayii", "Platycaulis", "Serpens", "Chlorantha", "Albiflora", "Imperialis Red", "Australis", "Patricia", "Engleriana", "Myrmecopa", "Rotundiflora", "Thomsonii", "Balaensis", "Meliflua ssp. Meliflua", "Erythrostemma Pink Corona", "Imbricata Maxima", "Soligamiana", "Bella", "Sigillatis", "Lobbii Dark Red", "Fitchii", "Multiflora Javanica Thai", "Blashernaezii ssp. Siariae Yellow Pink", "Kanyakumariana", "Praetorii", "Alagensis", "Blashernaezii ssp. Siariae Red", "Ischnopus", "Stoneana", "Hypolasia", "Pubicalyx Pink Dragon", "Mindorensis Purple", "Camphorifolia", "Pimenteliana", "Coronaria White", "Cutis-porcelana", "Davidcummingii", "Globulifera", "Polyneura", "Burtoniae", "Campanulata", "Lamingtoniae", "Pallilimba", "Diversifolia", "Blashernaezii", "Cv Ruthie", "Samoensis", "Erythrina", "Mindorensis Pink", "Affinis", "Pauciflora", "Linearis", "Shepherdii", "Decipulae"]);
+const PHOTOS = new Set(["Densifolia", "Griffithii", "Coronaria Pink", "Verticillata", "Micrantha", "Pubicalyx Red Button", "Mindorensis Yellow", "Guppyi", "Forbesii", "Celata", "Retusa", "Enduaensis", "Rubida", "Archboldiana", "Curtisii", "Cinnamomifolia Purpureofusca", "Cinnamomifolia", "Memoria", "Sarawak", "Blashernaezii ssp. Valmayoriana", "Surigaoensis", "Globulosa", "Lauterbachii", "Imperialis Pink", "Erythrostemma Pink", "Elliptica", "Odorata", "Quinquenervia", "Carnosa", "Ilagiorum", "Macgilivrayii", "Platycaulis", "Serpens", "Chlorantha", "Albiflora", "Imperialis Red", "Australis", "Patricia", "Engleriana", "Myrmecopa", "Rotundiflora", "Thomsonii", "Balaensis", "Meliflua ssp. Meliflua", "Erythrostemma Pink Corona", "Imbricata Maxima", "Soligamiana", "Bella", "Sigillatis", "Lobbii Dark Red", "Fitchii", "Multiflora Javanica Thai", "Blashernaezii ssp. Siariae Yellow Pink", "Kanyakumariana", "Praetorii", "Alagensis", "Blashernaezii ssp. Siariae Red", "Ischnopus", "Stoneana", "Hypolasia", "Pubicalyx Pink Dragon", "Mindorensis Purple", "Camphorifolia", "Pimenteliana", "Coronaria White", "Cutis-porcelana", "Davidcummingii", "Globulifera", "Polyneura", "Burtoniae", "Campanulata", "Lamingtoniae", "Pallilimba", "Diversifolia", "Blashernaezii", "Cv Ruthie", "Samoensis", "Erythrina", "Mindorensis Pink", "Affinis", "Pauciflora", "Linearis", "Shepherdii", "Decipulae"]);
 function shapeOf(p){
   if(SHAPES[p.name]) return {shape:SHAPES[p.name], src:"photo"};
   const t = (p.bloom + " " + p.care).toLowerCase();
@@ -4725,6 +4792,8 @@ const F3D = (() => {
 
         for(const M of pt.mats){
           gl.uniformMatrix4fv(loc.m, false, M ? new Float32Array(mul(Array.from(V), M)) : V);
+          /* a mirrored placement (negative determinant) reverses the winding: flip which side counts as the front */
+          gl.frontFace(M && (M[0]*(M[5]*M[10] - M[6]*M[9]) - M[1]*(M[4]*M[10] - M[6]*M[8]) + M[2]*(M[4]*M[9] - M[5]*M[8])) < 0 ? gl.CW : gl.CCW);
           { const R = M ? mul(RV, M) : RV; gl.uniformMatrix3fv(loc.nm, false, new Float32Array([R[0],R[1],R[2], R[4],R[5],R[6], R[8],R[9],R[10]])); }
           gl.uniform1f(loc.line, 0); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1,1);
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pt.i);
@@ -4818,7 +4887,7 @@ const F3D = (() => {
     const key = (pair ? "2|" : "1|") + JSON.stringify(Object.fromEntries(Object.entries(sp).filter(([k]) => /^(leaf|vein|petiole|stem)/.test(k))));
     if(STILLSL.has(key)) return STILLSL.get(key);
     if(!stillL){ const c = document.createElement("canvas"); stillL = mount(c, "three", 760); if(!stillL) return null; stillL.canvas = c; }
-    if(pair) stillL.angle(.75, .2); else stillL.angle(.38, -.66);   /* the stem turned well round, at a true three quarters */
+    if(pair) stillL.angle(.75, .2); /* the builder's pair preview starts here too */ else stillL.angle(.38, -.66);   /* the stem turned well round, at a true three quarters */
     stillL.leaf(sp, pair, pair ? 1.25 : 1.22);   /* closer in than the builder, so the leaves fill their tiles */
     /* centered on what is actually drawn: seen at three quarters the leaves sit off to one side of their 3D middle */
     const out = document.createElement("canvas"); out.width = out.height = 760; const ox = out.getContext("2d");
@@ -5154,7 +5223,9 @@ const F3D = (() => {
         const Y = [sd*Math.cos(bA), Math.sin(bA), 0], Z0 = [0, 0, 1], X0 = [Y[1]*Z0[2]-Y[2]*Z0[1], Y[2]*Z0[0]-Y[0]*Z0[2], Y[0]*Z0[1]-Y[1]*Z0[0]];
         /* rotation: each leaf turns on its own petiole, mirrored on the two sides so the pair stays symmetrical */
         const ro = sd*(sp.leafRoll || 0)*Math.PI/180, cr = Math.cos(ro), sr2 = Math.sin(ro);
-        const X = X0.map((v, i) => v*cr + Z0[i]*sr2), Z = Z0.map((v, i) => -X0[i]*sr2 + v*cr);
+        /* the second leaf is the first one's mirror image (its across axis flipped), not the same leaf turned round, so
+           any lean, twist or uneven waves come out mirrored too; the renderer flips its facing to match */
+        const X = X0.map((v, i) => sd*(v*cr + Z0[i]*sr2)), Z = Z0.map((v, i) => -X0[i]*sr2 + v*cr);
         const rot = v => [X[0]*v[0] + Y[0]*v[1] + Z[0]*v[2], X[1]*v[0] + Y[1]*v[1] + Z[1]*v[2], X[2]*v[0] + Y[2]*v[1] + Z[2]*v[2]];
         const Nd = [sd*sr*.6, 0, 0], dN = [sd*Math.cos(a), Math.sin(a), 0];
         const mid2 = (a + bA)/2, Jw = [Nd[0] + sd*Math.cos(mid2)*pl, Nd[1] + Math.sin(mid2)*pl, 0];   /* where the blade's base sits */
@@ -5363,19 +5434,33 @@ function originPlaces(o){
 }
 function originShort(o){ return o ? o.split(/[,(]| and /)[0].trim() : "Origin not recorded"; }
 
+/* the day's gradient for the collection box, and a tint for its title: five page accents picked at random, with a seed that changes each day,
+   each a wide soft glow at its own place, size and strength over the tile color, so the box reads as one gentle wash */
+function dayGradient(){
+  const d = new Date(), rnd = (() => { let s = hash(`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`) || 1;
+    return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; }; })();
+  const pool = [...new Set(DATA.map(p => accentOf(p.name)).filter(Boolean))];
+  const cols = [];
+  while(cols.length < 5 && pool.length) cols.push(pool.splice(Math.floor(rnd()*pool.length), 1)[0]);
+  const bg = cols.map((c, i) => {
+    /* sizes range widely: from a modest glow to one far wider than the box */
+    const sz = Math.pow(rnd(), 1.1), w = Math.round(40 + sz*140), h = Math.round(w*(1.1 + rnd()*.9));
+    const x = Math.round(-20 + rnd()*140), y = Math.round(-35 + rnd()*140);   /* centers can sit well past the edges */
+    const k = Math.round(20 + rnd()*22);   /* how strong this color is at its center: soft, never loud */
+    const m = v => `color-mix(in oklch, ${c} ${Math.round(k*v)}%, transparent)`;
+    /* a bell-shaped falloff, so no glow has an edge */
+    return `radial-gradient(${w}% ${h}% at ${x}% ${y}%, ${m(1)} 0%, ${m(.78)} 20%, ${m(.45)} 42%, ${m(.18)} 66%, ${m(0)} 100%)`;
+  }).join(", ");
+  return {bg, tint: cols[Math.floor(rnd()*cols.length)] || ""};   /* the title takes one of the five */
+}
 function renderHome(){
-  const spectrum = DATA.slice().sort((a,b)=>hue(accentOf(a.name))-hue(accentOf(b.name)));
   return `
   <section class="bento">
-    <div class="tile s12 hero">
+    ${(() => { const g = dayGradient(); return `<div class="tile s12 hero" style="--day-bg:${g.bg}; --day-tint:${g.tint}">`; })()}
       <h1>Hoya Collection</h1>
       <div class="hero-foot">
-        <p>Every Hoya I grow or have grown, with notes on light, water, soil, bloom and care. Each one has its own page in the color of its flowers.</p>
+        <p>Every Hoya I grow or have grown, with notes on light, water, soil, bloom and care.</p>
       </div>
-    </div>
-    <div class="tile s12">
-      <p class="label">Bloom spectrum</p>
-      <div class="spec">${spectrum.map(p=>`<a href="#${slug(p.name)}" style="background:${accentOf(p.name)}" title="${esc(p.name)}" aria-label="${esc(p.name)}"></a>`).join("")}</div>
     </div>
     <div class="tile s12">
       <div class="controls">
@@ -5504,11 +5589,13 @@ function smoothRect(x, y, w, h, r){
 /* every plant grows in the same mix, so the soil tile shows one short line (the detailed notes stay in the data, unused for now) */
 function soilPot(){
   if(SOIL_SVG) return SOIL_SVG;
-  /* the outline sits at pad; the mix fills a box ip inside it, so a small gap runs all round */
-  const W = 72, H = 116, pad = 4, ip = 3.5, ox0 = pad, ox1 = W - pad, x0 = pad + ip, x1 = W - pad - ip, y1 = H - pad - ip, inner = H - 2*(pad + ip);
+  /* each ingredient sits in its own rounded box, faintly tinted with its color, the boxes stacked with a small gap;
+     the particles keep a little inset from their box's sides */
+  const W = 72, H = 116, pad = 2, gap = 3, ip = 2.6, iv = 1.3, bx0 = pad, bx1 = W - pad, x0 = pad + ip, x1 = W - pad - ip;
+  const inner = H - 2*pad - gap*(SOIL.length - 1), boxes = [];
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const f = v => v.toFixed(1), out = [];
-  let yb = y1;
+  let yb = H - pad;
   /* particles never overlap: each is tried at random spots in its layer and kept only where it clears every particle
      already placed (by its own size plus a small gap), until the layer has its share or no room is left */
   /* slender husks are checked by their real shape (a thin capsule along their length), everything else as a circle */
@@ -5526,7 +5613,7 @@ function soilPot(){
     }
   };
   for(const L of SOIL){
-    const h = inner * L.share, top = yb - h, area = (x1 - x0) * h;
+    const bh = inner * L.share, bt = yb - bh, top = bt + iv, h = bh - 2*iv, area = (x1 - x0) * h, o0 = out.length;
     if(L.k === "stones")          /* pebbles: round, soft gray */
     { /* river stones: a handful of large ones first, then smaller ones of varied sizes fill the gaps around them */
       const stone = (x,y,r) => {
@@ -5570,12 +5657,15 @@ function soilPot(){
       place(top, h, area/5, () => 1.5 + rnd()*.8, (x,y,r) => { const a = rnd()*Math.PI;
         const pts = [0,1.7,3.3,4.6].map(t => { const rr = r*(.8 + rnd()*.2); return f(x + Math.cos(a+t)*rr) + "," + f(y + Math.sin(a+t)*rr*.8); }).join(" ");
         return `<polygon points="${pts}" fill="${L.color}"/>`; });
-    yb = top;
+    /* this layer's box: the faint tint behind, its particles clipped to it */
+    const box = smoothRect(bx0, bt, bx1 - bx0, bh, 4);
+    boxes.push(`<clipPath id="soil-${L.k}"><path d="${box}"/></clipPath>`);
+    out.splice(o0, 0, `<path d="${box}" fill="color-mix(in oklch, ${L.color} 16%, transparent)"/><g clip-path="url(#soil-${L.k})">`);
+    out.push(`</g>`);
+    yb = bt - gap;
   }
   SOIL_SVG = `<svg class="soil-pot" viewBox="0 0 ${W} ${H}" role="img" aria-label="Soil mix by volume: ${SOIL.map(L => L.label.toLowerCase() + " " + Math.round(L.share*100) + "%").join(", ")}">
-    <defs><clipPath id="soil-clip"><path d="${smoothRect(x0, pad + ip, x1 - x0, inner, 4.5)}"/></clipPath></defs>
-    <g clip-path="url(#soil-clip)">${out.join("")}</g>
-    <path d="${smoothRect(ox0, pad, ox1 - ox0, H - 2*pad, 8)}" fill="none" stroke="currentColor" stroke-opacity=".28" stroke-width="3.2" vector-effect="non-scaling-stroke"/></svg>`;
+    <defs>${boxes.join("")}</defs>${out.join("")}</svg>`;
   return SOIL_SVG;
 }
 function soilKey(){
@@ -5618,7 +5708,21 @@ function renderPlant(p){
   const humTile = hu ? `${rangeNum(hu[0], hu[1], "%")}
       <div class="meter hum"><span class="goo"><b style="left:${hu[0]}%; width:${Math.max(3,hu[1]-hu[0])}%"></b></span></div><div class="scale"><span>0</span><span>50</span><span>100%</span></div>`
     : `<div class="word none">No data</div>`;
-  const scentTile = sc ? `<div class="word">${esc(sc.word)}</div><div class="sub">${esc(sc.note)}</div>` : `<div class="word none">No data</div>`;
+  /* scent: like the origin card, the front shows the one word that best describes it over its ribbon; the plus flips the
+     card to every note and what the notes say about the scent */
+  const scentBox = (() => {
+    if(!sc) return `<div class="tile"><span class="vh">Scent</span><div class="word none">No data</div></div>`;
+    const txt = p.bloom + "\n" + p.care, KEY = /scent|smell|fragran|perfum|odou?r|vanilla|chocolate|honey|caramel|butterscotch|lemon|citric|gardenia|jasmine|orange-blossom|spicy|musky/i;
+    const lines = txt.split(/\n+|(?<=\.)\s+|,\s+/).map(x => x.trim().replace(/\.$/, "")).filter(x => x && KEY.test(x)).map(x => x[0].toUpperCase() + x.slice(1));   /* only the parts that speak of the scent */
+    const notes = sc.note.startsWith("Also: ") ? [sc.word, ...sc.note.slice(6).split(", ").map(x => x[0].toUpperCase() + x.slice(1).replace("-blossom", " blossom"))] : [];
+    const desc = lines.filter(l => l.toLowerCase() !== sc.word.toLowerCase() && !/^(\w+ )?scent$/i.test(l));
+    const more = notes.length > 1 || desc.length > 0;
+    if(!more) return `<div class="tile scent-face">${scentRibbon(p, sc)}<span class="vh">Scent</span><div class="word">${esc(sc.word)}</div></div>`;
+    return `<div class="tile origin-tile has-more"><div class="oc">
+        <div class="oc-face oc-front scent-face">${scentRibbon(p, sc)}<span class="vh">Scent</span><button type="button" class="oc-btn" aria-expanded="false" aria-label="Show more about the scent"><i></i></button><div class="word">${esc(sc.word)}</div></div>
+        <div class="oc-face oc-back" aria-hidden="true"><button type="button" class="oc-btn" aria-label="Show only the main scent" tabindex="-1"><i></i></button>
+          ${notes.length > 1 ? `<ul class="oc-list">${notes.map((x, i) => `<li style="--i:${i}">${esc(x)}</li>`).join("")}</ul>` : `<ul class="oc-list"><li style="--i:0">${esc(sc.word)}</li></ul>`}${desc.length ? `<p class="sub" style="--i:${Math.max(1, notes.length)}">${esc(desc.join(". "))}</p>` : sc.note && !notes.length ? `<p class="sub" style="--i:1">${esc(sc.note)}</p>` : ""}</div>
+      </div></div>`; })();
   const links = [];
   if(p.source){
     const lbl = p.sourceLabel.replace(/^Other source:\s*/,"").split("\n")[0];
@@ -5639,7 +5743,7 @@ function renderPlant(p){
     <div class="s12 stats">   <!-- the photo is shown only in the flower builder -->
     <div class="tile"><p class="stat-ico" title="Temperature">${icon("temp")}<span class="vh">Temperature</span></p>${tempTile}</div>
     <div class="tile"><p class="stat-ico" title="Humidity">${icon("humidity")}<span class="vh">Humidity</span></p>${humTile}</div>
-    <div class="tile"><p class="stat-ico" title="Scent">${icon("scent")}<span class="vh">Scent</span></p>${scentTile}</div>
+    ${scentBox}
     ${(() => { const o = (p.origin || "").trim(), sh = originShort(p.origin), op = originPlaces(o), more = op.places.length > 1 || !!op.note;
       const ico = `<p class="stat-ico" title="Origin">${icon("origin")}<span class="vh">Origin</span></p>`;
       if(!o) return `<div class="tile">${ico}<div class="word none">No data</div></div>`;
@@ -5647,7 +5751,7 @@ function renderPlant(p){
       return `<div class="tile origin-tile${more ? " has-more" : ""}"><div class="oc">
         <div class="oc-face oc-front">${ico}${more ? `<button type="button" class="oc-btn" aria-expanded="false" aria-label="Show every place of origin"><i></i></button>` : ""}<div class="word fit">${esc(sh)}</div></div>
         ${more ? `<div class="oc-face oc-back" aria-hidden="true">${ico}<button type="button" class="oc-btn" aria-label="Show only the first place" tabindex="-1"><i></i></button>
-          <ul class="oc-list">${op.places.map(x => `<li>${esc(x)}</li>`).join("")}</ul>${op.note ? `<p class="sub">${esc(op.note)}</p>` : ""}</div>` : ""}
+          <ul class="oc-list">${op.places.map((x, i) => `<li style="--i:${i}">${esc(x)}</li>`).join("")}</ul>${op.note ? `<p class="sub" style="--i:${op.places.length}">${esc(op.note)}</p>` : ""}</div>` : ""}
       </div></div>`; })()}
 
     </div>
@@ -5984,6 +6088,7 @@ function bindBuilder(p){
   B.f3d = F3D.mount(document.getElementById("b-3d"));
   B.u3d = F3D.mount(document.getElementById("b-u3d"), "front");
   B.l3d = F3D.mount(document.getElementById("b-l3d"), "three"); B.l3d2 = F3D.mount(document.getElementById("b-l3d2"), "three");
+  if(B.l3d2) B.l3d2.angle(.75, .2);   /* the pair starts at the same angle as the leaves on the hoya pages (leafStill) */
   B.pick = null; showSection(B.section || "corolla", true);
   const vseg = document.getElementById("v3d-seg");
   const moveV = instant => { const on = vseg.querySelector('[aria-pressed="true"]'), th = vseg.querySelector(".seg-thumb"); if(!on) return;
@@ -6146,7 +6251,12 @@ function originToggle(tile, open){
   (open ? bb : fb).focus({preventScroll: true});
 }
 document.addEventListener("click", e => {
-  const b = e.target.closest(".oc-btn"); if(b){ const t = b.closest(".origin-tile"); originToggle(t, !t.classList.contains("open")); return; }
+  const b = e.target.closest(".oc-btn");
+  if(b){ const t = b.closest(".origin-tile"), open = !t.classList.contains("open");
+    /* only one card open at a time: any other open card closes as this one opens */
+    document.querySelectorAll(".origin-tile.open").forEach(x => { if(x !== t) originToggle(x, false); });
+    originToggle(t, open);
+    return; }
   document.querySelectorAll(".origin-tile.open").forEach(t => { if(!t.contains(e.target)) originToggle(t, false); });
 });
 document.addEventListener("keydown", e => { if(e.key === "Escape") document.querySelectorAll(".origin-tile.open").forEach(t => originToggle(t, false)); });
@@ -6185,6 +6295,7 @@ function route(instant){
     else if(p){ B.plant = null; view.innerHTML = renderPlant(p); fitWords(view); fitSoil(); mountBloom(p); mountLeaves(p); document.title = "Hoya " + p.name; }
     else { B.plant = null; view.innerHTML = renderHome(); bindHome(); document.title = "Hoya Collection"; }
     document.body.dataset.page = (id === "build" || id.startsWith("build-")) ? "build" : p ? "plant" : "home";
+    { const hl = document.getElementById("home-link"), home = document.body.dataset.page === "home"; hl.tabIndex = home ? -1 : 0; hl.toggleAttribute("aria-hidden", home); }
     /* on a hoya's page the Flower builder button opens that hoya's flower */
     document.getElementById("builder-link").setAttribute("href", p ? "#build-" + slug(p.name) : "#build");
     hydrateUmbels();   /* after the new page is in place, so its umbels are found */
