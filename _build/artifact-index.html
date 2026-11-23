@@ -306,6 +306,10 @@ body[data-page="home"] .brand{opacity:0; pointer-events:none}   /* the home page
 .oc-list li, .oc-back .sub, .oc-back .globe-full, .oc-back .sr-back, .oc-back .oc-title{opacity:0; transform:translateY(6px); transition:opacity .15s var(--ease), transform .15s var(--ease)}
 .origin-tile.open .oc-list li, .origin-tile.open .oc-back .sub, .origin-tile.open .oc-back .globe-full, .origin-tile.open .oc-back .sr-back, .origin-tile.open .oc-back .oc-title{opacity:1; transform:none; transition:opacity .3s cubic-bezier(.23, 1, .32, 1), transform .3s cubic-bezier(.23, 1, .32, 1);
   transition-delay:calc(.3s + min(var(--i, 0), 10) * 30ms)}
+/* the open scent card: only its ribbon moves (waveScent); the title, notes and text are already in place */
+/* clipped to the card's rounded shape: Safari lets the moving, blurred ribbon (its own layer) paint past overflow:hidden */
+.oc-back.scent-back{-webkit-clip-path:inset(0 round var(--r)); clip-path:inset(0 round var(--r))}
+.stats .origin-tile .oc-back.scent-back .oc-title, .stats .origin-tile .oc-back.scent-back .oc-list li, .stats .origin-tile .oc-back.scent-back .sub, .stats .origin-tile .oc-back.scent-back .sr-back{opacity:1; transform:none; transition:none}
 .oc-btn{position:absolute; top:12px; right:12px; width:30px; height:30px; border-radius:50%; border:0; background:color-mix(in srgb, var(--sunk) 60%, transparent); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); mix-blend-mode:luminosity; color:color-mix(in oklch, var(--hue) var(--tm), var(--tb)); cursor:pointer;
   display:grid; place-items:center; transition:background-color .3s var(--ease), color .45s var(--ease), transform .25s var(--ease)}
 .oc-btn:hover{transform:scale(1.08)} .oc-btn:active{transform:scale(.97); transition-duration:.3s, .45s, .1s}
@@ -401,7 +405,11 @@ select{-webkit-appearance:none; appearance:none; box-sizing:border-box; font:500
 .b-stage{display:grid; place-items:center; min-height:420px; background:color-mix(in srgb, var(--acc) 22%, var(--tile)); transition:background-color .45s var(--ease)}
 .b-stage .art{width:min(86%,440px); height:auto; aspect-ratio:1}
 .b-single .art{width:min(80%,240px)}
-canvas.art3d{display:block}
+canvas.art3d, img.art3d{display:block}
+/* the pictures on the home and hoya pages are PNGs: each fades in once it has loaded */
+img.art-png{opacity:0; transition:opacity .25s var(--ease)}
+img.art-png.on{opacity:1}
+img.bloom-canvas{object-fit:contain}
 .art-wait{display:block; aspect-ratio:1}
 .art-in{animation:artIn .45s var(--ease) both}
 @keyframes artIn{from{opacity:0; transform:scale(.97)} to{opacity:1; transform:none}}
@@ -644,6 +652,24 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 .seg button .ct{font-family:var(--mono); font-size:11px; margin-left:6px; opacity:.55; transition:opacity .3s var(--ease)}
 .seg button[aria-pressed="true"] .ct{opacity:.8}
 </style>
+<script>
+/* starts a hoya page's pictures downloading the moment the page opens, before the site's code has loaded.
+   It skips pictures already kept in this browser, and follows saved designs (whose picture addresses are noted
+   in localStorage when they arrive). The hero umbel goes first */
+(function(){
+  try{
+    var id = location.hash.slice(1); if(!id || id.indexOf("build") === 0) return;
+    var saved = JSON.parse(localStorage.getItem("hoya-pic-srcs") || "{}")[id];
+    var local = JSON.parse(localStorage.getItem("hoya-pics-local") || "[]");
+    ["three", "front", "flower", "leaf"].forEach(function(k, i){
+      var src = (saved && saved[k]) || ("renders/" + id + "-" + k + ".webp?v=3");
+      if(local.indexOf(src) >= 0) return;
+      var l = document.createElement("link"); l.rel = "preload"; l.as = "image"; l.href = src;
+      l.setAttribute("fetchpriority", i === 0 ? "high" : "auto"); document.head.appendChild(l);
+    });
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 <!-- range meters: blur the track and the range together, then sharpen the edge again, so they join with smooth
@@ -4216,6 +4242,449 @@ function shapeOf(p){
 /* ---------- flower system ----------
    A flower is described by one spec. Every spec field can be changed in the builder;
    anything not saved there comes from the photo-based defaults below. */
+/* ===== the leaf engine: procedural veins and markings, shared with the leaf lab ===== */
+/* =====================================================================
+   Hoya leaf engine: procedural veins and patterns.
+   Leaf space: u runs along the blade (0 base, 1 tip), x across it, both in units of the blade length.
+   The vein network is built as a hierarchy of polylines (the way leaf architecture describes it), drawn into masks,
+   then every pixel is shaded from those masks plus noise fields for the patterns.
+   ===================================================================== */
+const LeafEngine = (() => {
+
+/* ---------- random and noise, all seeded so a leaf always redraws the same ---------- */
+const hash = (a, b, s) => { let x = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 1442695041);
+  x = Math.imul(x ^ (x >>> 13), 1274126177); return ((x ^ (x >>> 16)) >>> 0) / 4294967296; };
+function rng(seed){ let s = (seed * 2654435761) >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function vnoise(x, y, s){
+  const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(i, j, s), b = hash(i + 1, j, s), c = hash(i, j + 1, s), d = hash(i + 1, j + 1, s);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+function fbm(x, y, s, oct = 4){ let v = 0, a = .5, f = 1, n = 0; for(let o = 0; o < oct; o++){ v += a * vnoise(x * f, y * f, s + o * 17); n += a; a *= .5; f *= 2.03; } return v / n; }
+const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/* ---------- the defaults: every control the lab exposes ---------- */
+const DEFAULTS = {
+  seed: 7,
+  /* outline */
+  aspect: .5, widest: .45, baseFull: .6, tipFull: .85, drip: .2,
+  /* primary framework */
+  framework: "pinnate", basalPairs: 1, acroReach: .85, midribWidth: 1, midBend: .2,
+  /* secondaries */
+  secCount: 8, angleTop: 45, angleBase: 65, secDepart: .3, archSmooth: .4, spacingGrowth: .5, secCurve: .55, secIrregular: .35, secAlternate: .5,
+  ending: "loops", loopDist: .78, festoon: 1, interSec: .25, secWidth: .55,
+  /* minor veins */
+  terDensity: .5, terMode: .5, terSinuous: .4, areoleSize: .35, areoleStrength: .35, fev: .3, minorWidth: .5,
+  /* how the veins look */
+  cPrimary: .45, cSecondary: .3, cMinor: .1, veinTint: "#DDE9B2", relief: .25, pillow: .25,
+  /* blade color */
+  base: "#3E6E33", midGlow: .25, edgeDark: .3, colorNoise: .25, under: "#8DAA5A",
+  /* splash */
+  splash: 0, splashSize: .35, splashVar: .5, splashCluster: .4, splashBlotch: .2, splashAvoid: .6, splashEdge: .3, splashColor: "#DCE5E3", splashOpacity: .8,
+  /* mottle */
+  mottle: 0, mottleScale: .4, mottleSoft: .4, mottleLight: "#9DB57E", mottleDark: "#3B3448",
+  /* variegation */
+  varMode: "none", varExtent: .3, varMargin: 0, varCenter: 0, varColorC: "", varIrregular: .5, varVeins: .4, varColor: "#F1E9C2", varBand: "#C8D46A",
+  /* margin */
+  margin: 0, marginWidth: .25, marginColor: "#5A1E1A",
+  /* sun stress */
+  stress: 0, stressColor: "#B3333A", stressEdge: .6, stressPatch: .4, stressVeins: -.6,
+  /* surface */
+  gloss: .45, rough: .2, fuzz: 0, curvature: .45,
+};
+
+/* ---------- the outline ---------- */
+function makeOutline(P){
+  const N = 1024, W = new Float32Array(N + 1), a = Math.log(.5) / Math.log(clamp(P.widest, .12, .88));
+  for(let i = 0; i <= N; i++){
+    const u = i / N; if(u <= 0 || u >= 1){ W[i] = 0; continue; }
+    const q = Math.pow(u, a); let v = Math.pow(Math.sin(Math.PI * q), q < .5 ? lerp(1.15, .3, P.baseFull) : lerp(1.3, .35, P.tipFull));
+    if(P.drip) v *= 1 - P.drip * .62 * sstep(.5, .96, u);   /* an acuminate tip: the last part of the blade narrows into a point */
+    W[i] = P.aspect / 2 * v;
+  }
+  const at = u => { if(u <= 0 || u >= 1) return 0; const f = u * N, i = Math.floor(f); return W[i] + (W[i + 1] - W[i]) * (f - i); };
+  const slope = u => (at(Math.min(1, u + .002)) - at(Math.max(0, u - .002))) / .004;
+  return {at, slope, inner: () => 0, uBase: 0, uTop: .98};
+}
+
+/* ---------- the vein network ---------- */
+/* a vein is {pts:[[x,u],...], w:[...], order} with widths in units of the blade length */
+function buildVeins(P, O){
+  const R = rng(P.seed * 7919 + 13), veins = [];
+  const midX = u => P.midBend * .02 * Math.sin(Math.PI * u) * (1 - u * .4);
+  const mw = .011 * P.midribWidth;
+  /* 1. the midrib: thick at the base, tapering to a thread at the apex */
+  const uB = O.uBase || 0, uT = O.uTop || .98;
+  { const pts = [], w = []; for(let i = 0; i <= 120; i++){ const u = uB + .005 + i / 120 * (uT - uB - .005); pts.push([midX(u), u]); w.push(mw * Math.pow(1 - .9 * (u - uB) / (1 - uB), .85) + .0012); } veins.push({pts, w, order:0}); }
+  const rel = (x, u) => { const W = O.at(u); return W > 1e-5 ? Math.abs(x - midX(u)) / W : 1; };
+
+  /* trace one vein outwards from a start point: it leaves at its angle and bends towards the apex more and more
+     as it nears the margin, the way Hoya secondaries arch upwards */
+  function trace(x, u, side, ang, stopAt, curve, w0, taper, maxLen = 2, maxRise = 2){
+    const pts = [[x, u]], w = [w0], uStart = u, ds = .0035;
+    /* departure: a smooth vein leaves the midrib almost alongside it and swings out to its angle over a short run;
+       a sharp one leaves at its full angle straight away */
+    const a0 = ang * (1 - .85 * P.secDepart), Ld = .004 + .07 * P.secDepart;
+    let dx = side * Math.sin(a0), du = Math.cos(a0), len = 0;
+    /* arch: a gradual arch starts bending upwards early and curves evenly; a tight one stays straight, then turns up sharply near the loop */
+    const archExp = lerp(7, 1.1, P.archSmooth), archGain = lerp(46, 26, P.archSmooth);
+    for(let k = 0; k < 900; k++){
+      const r = rel(x, u);
+      if(r >= stopAt || u >= .985 || u <= .004 || len > maxLen || u - uStart > maxRise) break;
+      /* the arch tightens as the vein nears its loop: it stays fairly straight across the blade, then sweeps up */
+      if(len < Ld){ const th = lerp(a0, ang, sstep(0, Ld, len)); dx = side * Math.sin(th); du = Math.cos(th); }
+      const pull = len < Ld ? 0 : curve * archGain * Math.pow(r / stopAt, archExp);
+      du += pull * ds; let n = Math.hypot(dx, du); dx /= n; du /= n;
+      /* until it reaches its loop, the vein keeps heading outwards rather than turning to run up the blade */
+      const minOut = .34;
+      if(side * dx < minOut){ dx = side * minOut; du = Math.sqrt(1 - minOut * minOut) * Math.sign(du || 1); }
+      x += dx * ds; u += du * ds; len += ds;
+      pts.push([x, u]); w.push(w0);
+    }
+    for(let i = 0; i < w.length; i++) w[i] = w0 * (1 - taper * i / Math.max(1, w.length - 1)) + .0006;
+    return {pts, w, len};
+  }
+
+  /* veins into basal lobes (cordate leaves): from the base of the midrib they fan out downwards and arc into each lobe */
+  if(uB > .01) for(const side of [-1, 1]) for(const a of [118, 145]){
+    const tr = trace(midX(uB), uB + .002, side, a * Math.PI / 180, P.loopDist, P.secCurve * .4, mw * P.secWidth * .7, .8);
+    if(tr.pts.length > 3) veins.push({pts:tr.pts, w:tr.w, order:1});
+  }
+  /* 2. primaries from the base (acrodromous): nerves that run up beside the midrib and rejoin it near the apex */
+  const ribs = {"-1":[], "1":[]};
+  if(P.framework === "acrodromous"){
+    for(const side of [-1, 1]) for(let k = 1; k <= P.basalPairs; k++){
+      const rk = k / (P.basalPairs + 1) * .95, top = P.acroReach - (k - 1) * .06, pts = [], w = [];
+      for(let i = 0; i <= 140; i++){
+        const u = uB + .006 + i / 140 * (top - uB - .006), ramp = sstep(uB, uB + .1 + .04 * k, u), close = 1 - sstep(top - .3, top, u) * .92;
+        const wob = (fbm(u * 6, k * 3 + side, P.seed + 5) - .5) * .06;
+        pts.push([midX(u) + side * (rk + wob) * O.at(u) * ramp * close, u]); w.push(mw * (.62 - .1 * k) * (1 - .75 * u / top) + .001);
+      }
+      const v = {pts, w, order:0}; veins.push(v); ribs[side].push(v);
+    }
+  }
+
+  /* 3. secondaries: spacing and angle both grow towards the base (proximally), with some irregularity */
+  const secs = {"-1":[], "1":[]};
+  const n = Math.round(P.secCount), u0 = P.framework === "acrodromous" ? Math.max(uB + .12, P.acroReach * .35) : uB + .06, u1 = Math.min(.9, uT - .06);
+  const sw = mw * P.secWidth;
+  for(const side of [-1, 1]){
+    const off = side > 0 ? P.secAlternate * .5 : 0;
+    for(let i = 0; i < n; i++){
+      const t = clamp((i + off) / Math.max(1, n - 1 + .5), 0, 1);
+      /* gaps grow linearly towards the base: integrate a gap size of 1 + 1.5g at the base down to 1 at the tip */
+      const gg = 1.5 * P.spacingGrowth, F = s => s * (1 + gg) - gg * s * s / 2, pos = F(t) / F(1);
+      const gap = (u1 - u0) / Math.max(1, n) * (1 + gg * (1 - t)) / (1 + gg / 2);
+      let u = u0 + (u1 - u0) * pos + (R() - .5) * P.secIrregular * gap * .7;
+      u = clamp(u, .02, .94);
+      const ang = (lerp(P.angleBase, P.angleTop, Math.pow(t, .8)) + (R() - .5) * P.secIrregular * 14) * Math.PI / 180;
+      let stop = P.ending === "margin" ? .965 : P.ending === "fade" ? .86 : P.loopDist;
+      /* in a nerved leaf the secondaries off the midrib run out to the first basal nerve and join it */
+      const acro = P.framework === "acrodromous" && u < P.acroReach - .05;
+      if(acro) stop = 1 / (P.basalPairs + 1) * .95 * (1 - sstep(P.acroReach - .3, P.acroReach, u) * .92) + .01;
+      const curve = P.secCurve * (P.ending === "fade" ? 1.5 : 1);
+      const tr = trace(midX(u), u, side, ang, stop, curve, sw * (1 - .45 * t), P.ending === "fade" ? .95 : .55, 2, gap * (1.3 + 1.2 * curve) + .02);
+      if(tr.pts.length < 4) continue;
+      const v = {pts:tr.pts, w:tr.w, order:1, side, t}; veins.push(v); if(!acro) secs[side].push(v);
+      /* inter-secondaries: shorter, thinner veins halfway between two secondaries that give out before the margin */
+      if(i < n - 1 && R() < P.interSec){
+        const ui = u + gap * (.45 + (R() - .5) * .2);
+        const it = trace(midX(ui), ui, side, ang + .08, stop * (.35 + .35 * R()), curve * .8, sw * .45, .9, 2, gap * 1.2);
+        if(it.pts.length > 3) veins.push({pts:it.pts, w:it.w, order:2});
+      }
+    }
+    secs[side].sort((a, b) => a.pts[0][1] - b.pts[0][1]);
+  }
+
+  /* 4. loops: in a brochidodromous leaf each secondary bends up and joins the one above it, leaving a chain of arches
+     inside the margin; festoons are smaller arches outside those */
+  const arcPts = (a, b, c, k = 18) => { const out = []; for(let i = 0; i <= k; i++){ const t = i / k; out.push([(1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * c[0] + t * t * b[0], (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * c[1] + t * t * b[1]]); } return out; };
+  const loops = {"-1":[], "1":[]};
+  if(P.ending === "loops") for(const side of [-1, 1]){
+    const S = secs[side];
+    for(let i = 0; i < S.length; i++){
+      const A = S[i], E = A.pts[A.pts.length - 1], B = S[i + 1];
+      let J;
+      if(B){
+        const rj = P.loopDist * .9; let idx = B.pts.findIndex(p => rel(p[0], p[1]) >= rj); if(idx < 0) idx = B.pts.length - 1;
+        J = B.pts[idx];
+      } else continue;   /* the topmost secondary just runs out towards the apex */
+      /* the loop follows the margin's own curve: from the end of this vein it swings out to the loop distance,
+         runs up alongside the margin, and comes back in to meet the next vein */
+      const rE = rel(E[0], E[1]), rJ = rel(J[0], J[1]), pts = [], w0 = A.w[A.w.length - 1];
+      for(let k = 0; k <= 24; k++){
+        const t = k / 24, uu = lerp(E[1], J[1], t), base = lerp(rE, rJ, t);
+        const rr = base + (Math.min(.97, P.loopDist + .03) - base) * Math.pow(Math.sin(Math.PI * t), .55);
+        pts.push([midX(uu) + side * rr * O.at(uu), uu]);
+      }
+      const v = {pts, w:pts.map((_, k) => w0 * (.9 - .25 * k / pts.length)), order:1}; veins.push(v); loops[side].push(v);
+    }
+    /* festoons: one or two rows of smaller loops between the main arches and the margin */
+    for(let row = 1; row <= P.festoon; row++){
+      const L = loops[side], rr = Math.min(.975, P.loopDist + (1 - P.loopDist) * (row / (P.festoon + 1)) * 1.1);
+      for(let i = 0; i < L.length - 1; i++){
+        const A = L[i].pts, B = L[i + 1].pts, a = A[Math.floor(A.length * .72)], b = B[Math.floor(B.length * .28)];
+        if(b[1] - a[1] < .01) continue;
+        const ra = rel(a[0], a[1]), rb = rel(b[0], b[1]), pts = [];
+        for(let k = 0; k <= 16; k++){
+          const t = k / 16, uu = lerp(a[1], b[1], t), base = lerp(ra, rb, t);
+          pts.push([midX(uu) + side * (base + (rr - base) * Math.pow(Math.sin(Math.PI * t), .6)) * O.at(uu), uu]);
+        }
+        veins.push({pts, w:pts.map(() => sw * .3), order:2});
+      }
+    }
+  }
+
+  /* 5. tertiaries: cross-veins across each gap between neighbouring veins. Percurrent ones run straight across like
+     rungs; reticulate ones wander and branch, ending wherever they meet another vein */
+  const cum = pts => { const c = [0]; for(let i = 1; i < pts.length; i++) c.push(c[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return c; };
+  const at = (v, f) => { if(!v.c) v.c = cum(v.pts); const L = v.c[v.c.length - 1] * f; let i = v.c.findIndex(x => x >= L); if(i <= 0) return v.pts[Math.max(0, i)]; const t = (L - v.c[i - 1]) / Math.max(1e-9, v.c[i] - v.c[i - 1]); return [lerp(v.pts[i - 1][0], v.pts[i][0], t), lerp(v.pts[i - 1][1], v.pts[i][1], t)]; };
+  const tw = mw * .22 * P.minorWidth + .0007;
+  function rungs(A, B, count, f0 = .1, f1 = .92){
+    for(let k = 0; k < count; k++){
+      const f = lerp(f0, f1, (k + .5 + (R() - .5) * .6) / count), ret = R() < P.terMode;
+      /* a cross-vein runs to the nearest point of the next vein, i.e. square across the gap, tilted a little */
+      const a = at(A, f); let j = 0, bd = 9;
+      for(let q = 0; q < B.pts.length; q++){ const d2 = (B.pts[q][0] - a[0]) ** 2 + (B.pts[q][1] - a[1]) ** 2; if(d2 < bd){ bd = d2; j = q; } }
+      j = clamp(Math.round(j + (ret ? (R() - .5) * .22 : (R() - .5) * .06) * B.pts.length), 0, B.pts.length - 1);
+      const b = B.pts[j];
+      const d = Math.hypot(b[0] - a[0], b[1] - a[1]); if(d < .004) continue;
+      const nx = -(b[1] - a[1]) / d, nu = (b[0] - a[0]) / d, s = (R() - .5) * 2 * P.terSinuous * d * .35;
+      const c = [(a[0] + b[0]) / 2 + nx * s, (a[1] + b[1]) / 2 + nu * s];
+      let pts = arcPts(a, b, c, 10);
+      if(ret && R() < .35) pts = pts.slice(0, 5 + Math.floor(R() * 4));   /* some reticulate ones stop part way */
+      veins.push({pts, w:pts.map(() => tw), order:2});
+      if(ret && R() < .3){   /* and some branch */
+        const m = pts[Math.floor(pts.length / 2)], ang = Math.atan2(b[1] - a[1], b[0] - a[0]) + (R() < .5 ? 1 : -1) * (.9 + R() * .5), L = d * (.25 + R() * .3);
+        veins.push({pts:arcPts(m, [m[0] + Math.cos(ang) * L, m[1] + Math.sin(ang) * L], [m[0] + Math.cos(ang - .3) * L * .5, m[1] + Math.sin(ang - .3) * L * .5], 6), w:Array(7).fill(tw * .8), order:2});
+      }
+    }
+  }
+  const dens = P.terDensity;
+  if(dens > 0){
+    for(const side of [-1, 1]){
+      const S = secs[side];
+      for(let i = 0; i < S.length - 1; i++){ const len = S[i].c ? S[i].c.at(-1) : cum(S[i].pts).at(-1); rungs(S[i], S[i + 1], Math.max(1, Math.round(dens * 14 * len / .3)), .08, .95); }
+      /* the ladder between the basal nerves and the midrib, and between neighbouring nerves */
+      const Rb = ribs[side];
+      if(Rb.length){
+        const chain = [veins[0]].concat(Rb);
+        for(let i = 0; i < chain.length - 1; i++) rungs(chain[i], chain[i + 1], Math.round(dens * 26), .05, .78);
+        rungs(Rb[Rb.length - 1], {pts:Rb[Rb.length - 1].pts.map(p => [midX(p[1]) + Math.sign(side) * O.at(p[1]) * .93, p[1]])}, Math.round(dens * 20), .06, .8);
+      }
+    }
+  }
+  /* 6. freely ending veinlets: short dendritic twigs inside the smallest meshes */
+  const nF = Math.round(P.fev * 260 * P.aspect);
+  for(let k = 0; k < nF; k++){
+    const u = .05 + R() * .9, W = O.at(u); if(W < .01) continue;
+    const x = midX(u) + (R() * 2 - 1) * W * .85, a = R() * Math.PI * 2, L = (.006 + .012 * P.areoleSize) * (.6 + R());
+    const e = [x + Math.cos(a) * L, u + Math.sin(a) * L];
+    veins.push({pts:[[x, u], e], w:[tw * .7, tw * .3], order:3});
+    if(R() < .6){ const b = a + (R() < .5 ? .7 : -.7); veins.push({pts:[e, [e[0] + Math.cos(b) * L * .6, e[1] + Math.sin(b) * L * .6]], w:[tw * .3, tw * .15], order:3}); }
+  }
+  return {veins, midX};
+}
+
+/* ---------- blur, for soft fields drawn from the vein masks ---------- */
+function boxBlur(src, w, h, r, passes = 3){
+  let a = Float32Array.from(src), b = new Float32Array(src.length); r = Math.max(1, Math.round(r));
+  for(let p = 0; p < passes; p++){
+    for(let y = 0; y < h; y++){ let s = 0; const o = y * w; for(let x = -r; x <= r; x++) s += a[o + clamp(x, 0, w - 1)];
+      for(let x = 0; x < w; x++){ b[o + x] = s / (2 * r + 1); s += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)]; } }
+    for(let x = 0; x < w; x++){ let s = 0; for(let y = -r; y <= r; y++) s += b[clamp(y, 0, h - 1) * w + x];
+      for(let y = 0; y < h; y++){ a[y * w + x] = s / (2 * r + 1); s += b[Math.min(h - 1, y + r + 1) * w + x] - b[Math.max(0, y - r) * w + x]; } }
+  }
+  return a;
+}
+
+/* ---------- render a leaf into a canvas ----------
+   opt.H: canvas height in px; opt.view: "lit" | "color" | "veins" | "height";
+   opt.layers: which stages to include (for the step-by-step strip) */
+function render(Pin, opt = {}){
+  const P = Object.assign({}, DEFAULTS, Pin), O = opt.outline || makeOutline(P), Hc = opt.H || 720, tex = opt.view === "tex";
+  /* as a texture for the 3D leaf: no margins, the blade's full length top to bottom and its widest point side to side */
+  const L = tex ? Hc : Hc * .88, padT = tex ? 0 : Hc * .03;
+  let maxW = 0; for(let i = 0; i <= 400; i++) maxW = Math.max(maxW, O.at(i / 400));
+  const Wc = tex ? Math.max(8, Math.ceil(2 * maxW * L)) : Math.ceil(2 * maxW * L + Hc * .06), cx = Wc / 2;
+  const lay = Object.assign({primary:true, secondary:true, minor:true, areoles:true, relief:true, color:true, patterns:true, light:true}, opt.layers || {});
+  const toPx = (x, u) => [cx + x * L, padT + (1 - u) * L];
+  const {veins, midX} = buildVeins(P, O);
+  /* draw the veins into one mask per order */
+  const masks = [0, 1, 2].map(() => { const c = document.createElement("canvas"); c.width = Wc; c.height = Hc; return c; });
+  for(const v of veins){
+    const k = Math.min(2, v.order);
+    if(k === 0 && !lay.primary || k === 1 && !lay.secondary || k === 2 && !lay.minor) continue;
+    const g = masks[k].getContext("2d"); g.strokeStyle = "#fff"; g.lineCap = "round"; g.lineJoin = "round";
+    for(let i = 1; i < v.pts.length; i++){
+      const a = toPx(...v.pts[i - 1]), b = toPx(...v.pts[i]);
+      g.lineWidth = Math.max(.6, (v.w[i - 1] + v.w[i]) / 2 * L);
+      g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+    }
+  }
+  const N = Wc * Hc, M = masks.map(c => { const d = c.getContext("2d").getImageData(0, 0, Wc, Hc).data, a = new Float32Array(N); for(let i = 0; i < N; i++) a[i] = d[i * 4 + 3] / 255; return a; });
+  /* inside mask, distance to the margin, and the blade's own coordinates */
+  const inside = new Float32Array(N), E = new Float32Array(N), Xs = new Float32Array(N), Us = new Float32Array(N);
+  for(let py = 0; py < Hc; py++){
+    const u = 1 - (py - padT) / L, W = O.at(u), sl = O.slope(u), mx = midX(u), cs = 1 / Math.sqrt(1 + sl * sl);
+    for(let px = 0; px < Wc; px++){
+      const i = py * Wc + px, x = (px - cx) / L; Xs[i] = x; Us[i] = u;
+      if(W <= 0){ inside[i] = 0; continue; }
+      const wi = O.inner(u), dpx = Math.min((W - Math.abs(x)) * L * cs, wi > 0 ? (Math.abs(x) - wi) * L : 1e9); inside[i] = clamp(dpx + .5); E[i] = clamp(1 - Math.abs(x - mx) / W);
+    }
+  }
+  /* areoles: the smallest closed meshes, as cell edges of a jittered grid (Worley F2 - F1), warped so they're never regular */
+  const are = new Float32Array(N);
+  if(lay.areoles && P.areoleStrength > 0){
+    const cs = .012 + .045 * P.areoleSize, ew = .04 + .07 * P.minorWidth;
+    for(let i = 0; i < N; i++){
+      if(inside[i] <= 0) continue;
+      let x = Xs[i] / cs, y = Us[i] / cs;
+      x += (vnoise(x * .7, y * .7, P.seed + 31) - .5) * .9; y += (vnoise(x * .7 + 9, y * .7, P.seed + 37) - .5) * .9;
+      const ix = Math.floor(x), iy = Math.floor(y); let f1 = 9, f2 = 9;
+      for(let a = -1; a <= 1; a++) for(let b = -1; b <= 1; b++){
+        const X = ix + a, Y = iy + b, dx = X + hash(X, Y, P.seed + 3) - x, dy = Y + hash(X, Y, P.seed + 4) - y, d = Math.sqrt(dx * dx + dy * dy);
+        if(d < f1){ f2 = f1; f1 = d; } else if(d < f2) f2 = d;
+      }
+      are[i] = (1 - sstep(0, ew, f2 - f1)) * P.areoleStrength * sstep(.0, .12, E[i]);
+    }
+  }
+  const minor = new Float32Array(N); for(let i = 0; i < N; i++) minor[i] = Math.max(M[2][i], are[i]);
+  /* soft fields: how close each point is to a large vein (for pillowing between veins and for splash that keeps off veins) */
+  const major = new Float32Array(N); for(let i = 0; i < N; i++) major[i] = Math.max(M[0][i], M[1][i], M[2][i] * .5);
+  const near = boxBlur(major, Wc, Hc, Hc * .012, 3);
+  const nearMax = near.reduce((m, v) => Math.max(m, v), 1e-6);
+  const soft = [boxBlur(M[0], Wc, Hc, 1.2, 2), boxBlur(M[1], Wc, Hc, 1.1, 2), boxBlur(minor, Wc, Hc, .8, 1)];
+  /* height: the blade's own curve across, veins raised or sunken, the tissue between them puffed up, and fine grain */
+  const Hh = new Float32Array(N);
+  for(let i = 0; i < N; i++){
+    if(inside[i] <= 0) continue;
+    let h = tex ? 0 : P.curvature * 3.2 * Math.sqrt(E[i]);
+    if(lay.relief){
+      h += P.relief * 2.4 * (soft[0][i] + soft[1][i] * .75 + soft[2][i] * .35);
+      h += P.pillow * 2.2 * (1 - clamp(near[i] / nearMax * 1.6)) * sstep(0, .2, E[i]);
+    }
+    h += P.rough * .35 * (vnoise(Xs[i] * 900, Us[i] * 900, P.seed + 61) - .5);
+    Hh[i] = h;
+  }
+  /* ---------- shading ---------- */
+  const out = new ImageData(Wc, Hc), D = out.data;
+  const base = hex(P.base), tint = hex(P.veinTint), dark = base.map(v => v * .42), sC = hex(P.splashColor), mL = hex(P.mottleLight), mD = hex(P.mottleDark),
+    vC = hex(P.varColor), vB = hex(P.varBand), mC = hex(P.marginColor), stC = hex(P.stressColor);
+  const lx = -.45, ly = -.55, lz = .7, ln = Math.hypot(lx, ly, lz), Lx = lx / ln, Ly = ly / ln, Lz = lz / ln;
+  const hx = Lx, hy = Ly, hz = Lz + 1, hn = Math.hypot(hx, hy, hz), Hx = hx / hn, Hy = hy / hn, Hz = hz / hn;
+  const spPow = 8 + 90 * P.gloss * (1 - P.rough * .8), seed = P.seed;
+  const scs = .01 + .045 * P.splashSize;
+  function splashAt(x, u, e, i){
+    if(P.splash <= 0) return 0;
+    let best = 0;
+    for(const [cs, dens, big] of [[scs, P.splash, 0], [scs * 2.6, P.splash * P.splashBlotch, 1]]){
+      if(dens <= 0) continue;
+      const gx = x / cs, gy = u / cs, ix = Math.floor(gx), iy = Math.floor(gy);
+      for(let a = -1; a <= 1; a++) for(let b = -1; b <= 1; b++){
+        const X = ix + a, Y = iy + b, s0 = seed + 101 + big * 50;
+        const cxp = X + hash(X, Y, s0), cyp = Y + hash(X, Y, s0 + 1);
+        /* how likely a fleck is here: clustering noise, more towards the margin, fewer on veins */
+        const cl = lerp(1, sstep(.35, .7, fbm(cxp * cs * 5, cyp * cs * 5, seed + 77, 3)) * 1.6, P.splashCluster);
+        const eb = lerp(1, Math.pow(1 - e, .6) * 1.5 + .1, P.splashEdge);
+        if(hash(X, Y, s0 + 2) > dens * cl * eb) continue;
+        const rv = hash(X, Y, s0 + 3), rad = (.16 + .2 * hash(X, Y, s0 + 4)) * (1 + P.splashVar * 2.4 * Math.pow(rv, 4)) * (big ? 1.15 : 1);
+        const th = hash(X, Y, s0 + 5) * Math.PI, asp = 1 + 1.2 * hash(X, Y, s0 + 6), c = Math.cos(th), s = Math.sin(th);
+        const dx = gx - cxp, dy = gy - cyp, rx = (dx * c + dy * s) / asp, ry = -dx * s + dy * c;
+        let d = Math.sqrt(rx * rx + ry * ry) / rad;
+        d += (vnoise(gx * 5, gy * 5, s0 + 9) - .5) * .38 + (vnoise(gx * 13, gy * 13, s0 + 19) - .5) * .18;   /* ragged edges, at two scales */
+        best = Math.max(best, 1 - sstep(.62, 1, d));
+      }
+    }
+    return best * (1 - P.splashAvoid * clamp(near[i] / nearMax * 1.8));
+  }
+  for(let py = 0; py < Hc; py++) for(let px = 0; px < Wc; px++){
+    const i = py * Wc + px; let A = inside[i]; if(A <= 0 && !tex) continue;
+    if(tex){ if(A <= 0){ const o = i * 4, bc = hex(P.base); D[o] = bc[0] * 255; D[o + 1] = bc[1] * 255; D[o + 2] = bc[2] * 255; D[o + 3] = 255; continue; } A = 1; }   /* a texture is filled edge to edge with the blade's color, so filtering at the margin never pulls in an empty one */
+    const x = Xs[i], u = Us[i], e = E[i], o = i * 4;
+    let col;
+    if(opt.view === "veins"){ const v = Math.max(M[0][i], M[1][i] * .85, minor[i] * .6); col = mix3([.09, .11, .09], [.92, .95, .86], v); }
+    else if(opt.view === "height"){ const h = .5 + Hh[i] * .09; col = [h, h, h]; }
+    else {
+      col = base.slice();
+      if(lay.color){
+        /* lighter along the midrib, darker towards the margin, and a slow uneven wash of color */
+        col = mix3(col, mix3(base, tint, .55), P.midGlow * Math.pow(e, 6) * .6);
+        col = mix3(col, base.map(v => v * .62), P.edgeDark * Math.pow(1 - e, 2.2));
+        const cn = fbm(x * 9, u * 9, seed + 11, 3) - .5; col = col.map(v => v * (1 + cn * P.colorNoise * .7));
+      }
+      if(lay.patterns){
+        if(P.mottle > 0){
+          const wx = x * (3 + 9 * P.mottleScale), wy = u * (3 + 9 * P.mottleScale);
+          const q = fbm(wx + 1.1 * fbm(wx, wy, seed + 21, 3), wy + 1.1 * fbm(wx + 5, wy, seed + 23, 3), seed + 25, 4);
+          const sw = .03 + .12 * P.mottleSoft;
+          col = mix3(col, mL, P.mottle * sstep(.56 - sw, .56 + sw, q));
+          col = mix3(col, mD, P.mottle * .8 * (1 - sstep(.36 - sw, .36 + sw, q)));
+        }
+        /* variegation: one zone (varMode, with varExtent), or a margin and a center zone at once (varMargin, varCenter) */
+        const zones = P.varMode !== "none" ? [[P.varMode, P.varExtent, vC]] : [];
+        if(P.varMargin > 0) zones.push(["margin", P.varMargin, vC]);
+        if(P.varCenter > 0) zones.push(["center", P.varCenter, P.varColorC ? hex(P.varColorC) : vC]);
+        for(const [mode, ext, vcol] of zones){
+          let f = mode === "margin" ? 1 - e : e;
+          f += (fbm(x * 14, u * 14, seed + 41 + (mode === "center" ? 7 : 0), 4) - .5) * P.varIrregular * .5 - P.varVeins * (near[i] / nearMax) * .25 * (mode === "margin" ? -1 : 1);
+          const t = ext, bw = .05;
+          const inV = sstep(1 - t - bw * .5, 1 - t + bw * .5, f), band = sstep(1 - t - bw * 1.6, 1 - t - bw * .3, f) * (1 - inV);
+          col = mix3(col, vB, band * .8); col = mix3(col, vcol, inV);
+        }
+        if(P.stress > 0){
+          const ed = lerp(1, Math.pow(1 - e, 1.4) * 1.6, P.stressEdge) + (u > .7 ? (u - .7) * P.stressEdge : 0);
+          const pt = lerp(1, sstep(.3, .75, fbm(x * 7, u * 7, seed + 51, 4)) * 1.5, P.stressPatch);
+          let s = clamp(P.stress * ed * pt * 1.15);
+          const vm = Math.max(M[0][i], M[1][i], minor[i] * .7);
+          s = P.stressVeins < 0 ? s * (1 + P.stressVeins * vm) : clamp(s + P.stressVeins * vm * P.stress);
+          col = mix3(col, stC.map(v => v * (.8 + .2 * (1 - s))), s * .85);
+        }
+        if(P.margin > 0){
+          const d = e / Math.max(.02, P.marginWidth * .5) + (vnoise(x * 60, u * 60, seed + 71) - .5) * .4;
+          col = mix3(col, mC, P.margin * (1 - sstep(.55, 1, d)));
+        }
+      }
+      /* the veins themselves: each order lighter (positive contrast) or darker (negative) than the blade */
+      const vdraw = (m, c) => { if(c > 0) col = mix3(col, tint, c * m); else if(c < 0) col = mix3(col, dark, -c * m); };
+      vdraw(M[0][i], P.cPrimary); vdraw(M[1][i], P.cSecondary); vdraw(minor[i], P.cMinor);
+      var spl = lay.patterns ? splashAt(x, u, e, i) : 0;
+      if(spl > 0) col = mix3(col, sC, spl * P.splashOpacity);
+      if(opt.view !== "color" && lay.light){
+        const l = Hh[i - 1] !== undefined ? i : i, gx = (Hh[Math.min(N - 1, i + 1)] - Hh[Math.max(0, i - 1)]) * .5, gy = (Hh[Math.min(N - 1, i + Wc)] - Hh[Math.max(0, i - Wc)]) * .5;
+        let nx = -gx, ny = -gy, nz = 1; const nn = Math.hypot(nx, ny, nz); nx /= nn; ny /= nn; nz /= nn;
+        const dif = Math.max(0, nx * Lx + ny * Ly + nz * Lz), nh = Math.max(0, nx * Hx + ny * Hy + nz * Hz);
+        let spec = (.12 + .55 * P.gloss) * Math.pow(nh, spPow) * (1 - P.fuzz * .85) * (1 + spl * 1.2);
+        if(tex){ const s2 = (.5 + .62 * dif) / (.5 + .62 * Lz); col = col.map(v => v * s2); }   /* only the relief's light and shade: the 3D leaf adds its own form, sheen and hairs */
+        else {
+        const sh = .5 + .62 * dif;
+        col = col.map(v => v * sh + spec);
+        }
+        if(!tex && P.fuzz > 0){ const rim = Math.pow(1 - e, 3), fz = P.fuzz * (.1 + .3 * rim + .12 * vnoise(x * 700, u * 700, seed + 91)); col = mix3(col, [.86, .9, .8], fz); }
+      }
+    }
+    D[o] = clamp(col[0]) * 255; D[o + 1] = clamp(col[1]) * 255; D[o + 2] = clamp(col[2]) * 255; D[o + 3] = A * 255;
+  }
+  if(tex){ const cv = opt.canvas || document.createElement("canvas"); cv.width = Wc; cv.height = Hc; cv.getContext("2d").putImageData(out, 0, 0); cv.maxW = maxW; return cv; }
+  /* compose: petiole under the blade */
+  const cv = opt.canvas || document.createElement("canvas"); cv.width = Wc; cv.height = Hc + Math.round(Hc * .06);
+  const g = cv.getContext("2d"); g.clearRect(0, 0, cv.width, cv.height);
+  if(opt.view !== "veins" && opt.view !== "height"){
+    const [bx, by] = toPx(midX(0), 0); g.strokeStyle = "rgb(" + base.map(v => Math.round(v * 200)).join(",") + ")"; g.lineCap = "round"; g.lineWidth = Math.max(2, L * .02);
+    g.beginPath(); g.moveTo(bx, by - 2); g.quadraticCurveTo(bx - L * .01, by + L * .04, bx - L * .02, by + L * .07); g.stroke();
+  }
+  const tmp = document.createElement("canvas"); tmp.width = Wc; tmp.height = Hc; tmp.getContext("2d").putImageData(out, 0, 0);
+  g.drawImage(tmp, 0, 0);
+  return cv;
+}
+
+return {DEFAULTS, render};
+})();
+
 const SPEC_FIELDS = {
   petalWidth:  {min:.15, max:.9,  step:.01, label:"Lobe width",      hint:"How broad each corolla lobe is"},
   roundness:   {min:0,   max:.5,  step:.01, label:"Lobe tip roundness",    hint:"Tips of the corolla lobes: 0 is pointed, 0.5 is fully round"},
@@ -4283,21 +4752,63 @@ const SPEC_FIELDS = {
   leafWaves:   {min:1,   max:14,  step:1,   label:"Waves",            hint:"How many waves run along each margin"},
   leafPucker:  {min:0,   max:1,   step:.01, label:"Pucker",           hint:"Dimples and puckers across the blade (bullate)"},
   leafThick:   {min:.02, max:.6,  step:.01, label:"Thickness",        hint:"How thick and succulent the blade is, as a share of its width; it thins to nothing at the margin"},
-  veinStyle:   {min:0,   max:1,   step:.01, label:"Vein pattern",     hint:"0 is pinnate (side veins off the midrib), 1 palmate (nerves running from the base towards the tip)"},
-  veinCount:   {min:0,   max:12,  step:1,   label:"Side veins",       hint:"Pairs of side veins (pinnate), or nerves from the base (palmate); 0 shows only the midrib"},
-  veinAngle:   {min:15,  max:80,  step:1,   label:"Vein angle",       hint:"Angle of the side veins away from the midrib, in degrees"},
-  veinWidth:   {min:.3,  max:3,   step:.01, label:"Vein width",       hint:"How broad the veins are; 1 is natural"},
-  veinShow:    {min:0,   max:1,   step:.01, label:"Vein contrast",    hint:"How clearly the vein color shows: 0 hides the veins (obscure), 1 shows them fully"},
-  veinRelief:  {min:-1,  max:1,   step:.01, label:"Vein relief",      hint:"Below 0 the veins sink into the blade, above 0 they stand raised"},
+  /* veins: built order by order, the way leaf architecture describes them (see the leaf lab) */
+  veinBasal:{min:0, max:3, step:1, label:"Nerves from the base", hint:"0 is one midrib (pinnate). 1 to 3 pairs of nerves run up beside it from the base and rejoin it near the tip, as in 3- and 5-nerved leaves"},
+  veinReach:{min:0.4, max:0.97, step:0.01, label:"Nerve reach", hint:"How far up the basal nerves run before rejoining the midrib"},
+  veinWidth:{min:0.3, max:2.5, step:0.01, label:"Midrib width", hint:"How thick the midrib is at the base; 1 is natural"},
+  veinCount:{min:2, max:26, step:1, label:"Side veins", hint:"Pairs of secondary veins leaving the midrib"},
+  veinAngleTop:{min:15, max:80, step:1, label:"Angle at the tip", hint:"Angle of the side veins near the tip, in degrees from the midrib"},
+  veinAngle:{min:20, max:90, step:1, label:"Angle at the base", hint:"Angle of the side veins near the base; in Hoya it opens up smoothly towards the base"},
+  veinDepart:{min:0, max:1, step:0.01, label:"Smooth departure", hint:"0 leaves the midrib at the full angle, a sharp corner; 1 runs alongside the midrib first and swings out in a smooth curve"},
+  veinArch:{min:0, max:1.5, step:0.01, label:"Upward arch", hint:"How far the side veins bend towards the tip"},
+  veinArchSmooth:{min:0, max:1, step:0.01, label:"Arch smoothness", hint:"0 stays straight, then turns up sharply near the loop; 1 bends evenly from the start"},
+  veinSpacing:{min:0, max:1, step:0.01, label:"Wider spacing at base", hint:"How much the gaps between side veins grow towards the base"},
+  veinIrregular:{min:0, max:1, step:0.01, label:"Irregularity", hint:"Jitter in where the side veins start and at what angle"},
+  veinAlternate:{min:0, max:1, step:0.01, label:"Alternate", hint:"0 opposite pairs, 1 offset by half a gap"},
+  veinEnd:{min:0, max:2, step:1, label:"Ending", hint:"0: each side vein loops into the one above (brochidodromous). 1: runs out to the margin. 2: fades before it"},
+  veinLoop:{min:0.5, max:0.95, step:0.01, label:"Loop distance", hint:"How far out the loops form, as a share of the half-width"},
+  veinFestoon:{min:0, max:2, step:1, label:"Festoon rows", hint:"Rows of smaller loops between the main loops and the margin"},
+  veinInter:{min:0, max:1, step:0.01, label:"Inter-secondaries", hint:"Short veins between the side veins that stop part way"},
+  veinSecWidth:{min:0.2, max:1.2, step:0.01, label:"Side vein width", hint:"Width of the side veins, as a share of the midrib"},
+  veinTer:{min:0, max:1.5, step:0.01, label:"Cross-vein density", hint:"Tertiary veins bridging each gap between side veins"},
+  veinNet:{min:0, max:1, step:0.01, label:"Ladder to net", hint:"0 percurrent (straight rungs across), 1 reticulate (wandering, branching)"},
+  veinSinuous:{min:0, max:1, step:0.01, label:"Sinuosity", hint:"How much the cross-veins wave"},
+  veinAreole:{min:0, max:1, step:0.01, label:"Areole size", hint:"Size of the smallest closed meshes"},
+  veinAreoleAmt:{min:0, max:1, step:0.01, label:"Areole strength", hint:"How clearly the finest mesh shows"},
+  veinFev:{min:0, max:1, step:0.01, label:"Free-ending veinlets", hint:"Short dead-end twigs inside the meshes"},
+  veinMinorWidth:{min:0.2, max:1.5, step:0.01, label:"Minor vein width", hint:"Width of the cross-veins and the mesh"},
+  veinMid:{min:-1, max:1, step:0.01, label:"Midrib contrast", hint:"Above 0 lighter than the blade, below 0 darker"},
+  veinSec:{min:-1, max:1, step:0.01, label:"Side vein contrast", hint:"Above 0 lighter than the blade, below 0 darker"},
+  veinMinor:{min:-1, max:1, step:0.01, label:"Minor vein contrast", hint:"Above 0 lighter than the blade, below 0 darker"},
+  veinRelief:{min:-1, max:1, step:0.01, label:"Vein relief", hint:"Below 0 the veins sink into grooves, above 0 they stand raised"},
+  veinPillow:{min:0, max:1, step:0.01, label:"Pillowing", hint:"The tissue puffs up between the veins (bullate)"},
   leafRoughness:{min:0,  max:1,   step:.01, label:"Roughness",        hint:"Surface of the blade: 0 is smooth and waxy with a bright sheen, 1 is rough and matte"},
   leafFuzz:    {min:0,   max:1,   step:.01, label:"Fuzz",             hint:"Hairs on the blade (indumentum): 0 is glabrous, 1 densely felted"},
   leafFuzzLength:{min:0, max:1,   step:.01, label:"Hair length",      hint:"How long the hairs are"},
-  leafSplashAmt:{min:0,  max:1,   step:.01, label:"Splash",           hint:"Silver flecks across the top, from air pockets under the skin: how many"},
-  leafSplashSize:{min:0, max:1,   step:.01, label:"Splash size",      hint:"How big the flecks are, from fine freckles to large blotches"},
-  leafVarMarginAmt:{min:0, max:1, step:.01, label:"Margin variegation", hint:"How far the variegated band reaches in from the margin"},
-  leafVarCenterAmt:{min:0, max:1, step:.01, label:"Center variegation", hint:"How far the variegated center reaches out from the midrib"},
-  leafEdgeAmt: {min:0,   max:1,   step:.01, label:"Edge tint",        hint:"How strongly the edge takes on its tint, as with sun-stress blush or a dark margin"},
-  leafEdgeWidth:{min:.05, max:1,  step:.01, label:"Edge tint width",  hint:"How far in from the margin the edge tint reaches"},
+  leafMidGlow:{min:0, max:1, step:0.01, label:"Midrib glow", hint:"A lighter band along the midrib"},
+  leafEdgeDark:{min:0, max:1, step:0.01, label:"Darker edges", hint:"The blade darkens towards the margin"},
+  leafUneven:{min:0, max:1, step:0.01, label:"Unevenness", hint:"A slow, uneven wash of color across the blade"},
+  leafSplashAmt:{min:0, max:1, step:0.01, label:"Splash", hint:"Silver flecks from air pockets under the skin: how many"},
+  leafSplashSize:{min:0, max:1, step:0.01, label:"Splash size", hint:"From fine freckles to larger flecks"},
+  leafSplashVar:{min:0, max:1, step:0.01, label:"Size variety", hint:"A few flecks much larger than the rest"},
+  leafSplashCluster:{min:0, max:1, step:0.01, label:"Clustering", hint:"Flecks gather in patches"},
+  leafSplashBlotch:{min:0, max:1, step:0.01, label:"Blotches", hint:"Larger merged patches over the fine flecks"},
+  leafSplashAvoid:{min:0, max:1, step:0.01, label:"Keeps off veins", hint:"Flecks break where a vein runs"},
+  leafSplashEdge:{min:0, max:1, step:0.01, label:"Toward the margin", hint:"More flecks near the edge"},
+  leafMottle:{min:0, max:1, step:0.01, label:"Mottle", hint:"Large soft blotches of lighter and darker color"},
+  leafMottleScale:{min:0, max:1, step:0.01, label:"Mottle scale", hint:"Small to large blotches"},
+  leafMottleSoft:{min:0, max:1, step:0.01, label:"Mottle softness", hint:"Crisp to soft edges"},
+  leafVarMarginAmt:{min:0, max:0.9, step:0.01, label:"Margin variegation", hint:"How far the pale zone reaches in from the margin"},
+  leafVarCenterAmt:{min:0, max:0.9, step:0.01, label:"Center variegation", hint:"How far the pale zone reaches out from the midrib"},
+  leafVarRagged:{min:0, max:1, step:0.01, label:"Ragged edge", hint:"How irregular the edge of the pale zone is"},
+  leafVarVeins:{min:0, max:1, step:0.01, label:"Follows veins", hint:"The pale zone creeps along the veins"},
+  leafMarginAmt:{min:0, max:1, step:0.01, label:"Dark margin", hint:"A darker or blushing band along the edge"},
+  leafMarginWidth:{min:0.05, max:1, step:0.01, label:"Margin width", hint:"How far in the band reaches"},
+  leafEdgeAmt:{min:0, max:1, step:0.01, label:"Sun stress", hint:"Red pigment from strong light: how much"},
+  leafEdgeWidth:{min:0, max:1, step:0.01, label:"Starts at the edge", hint:"0 even across the blade, 1 strongest at the margin and tip"},
+  leafStressPatch:{min:0, max:1, step:0.01, label:"Patchiness", hint:"How patchy the stress color is"},
+  leafStressVeins:{min:-1, max:1, step:0.01, label:"Veins under stress", hint:"Below 0 the veins stay green or cream, above 0 they redden first"},
+  leafSeed:{min:0, max:999, step:1, label:"Pattern seed", hint:"A different random layout of veins and markings, same settings"},
   leafPerNode: {min:1,   max:2,   step:1,   label:"Leaves per node",  hint:"2 is an opposite pair, as in most Hoyas; 1 is a single leaf at each node, as in imbricata"},
   petioleLength:{min:0,  max:1.5, step:.01, label:"Petiole length",   hint:"Length of the leaf stalk, relative to the blade"},
   leafAttach:  {min:-70, max:85,  step:1,   label:"Angle on the stem", hint:"The angle the petioles leave the node at, in degrees: they grow up along the stem, the way the plant grows (90 is straight up, 0 straight out), then curve to meet the leaves"},
@@ -4311,8 +4822,8 @@ const SPEC_FIELDS = {
   heroTilt:    {min:-90, max:90,  step:1,   label:"Tilt",              hint:"Tilts the big umbel behind the name towards you (below 0) or away (above 0), in degrees"}
 };
 const COLOR_FIELDS = [["petalCentre","Corolla, center"],["petalMid","Corolla, middle"],["petalTip","Corolla, lobe tips"],["fuzzColor","Fuzz"],["sheenColor","Corolla sheen"],["coronaCentre","Corona, center"],["coronaTip","Corona, lobe tips"],["coronaSheenColor","Corona sheen"],["dot","Gynostegium"],["pedicel","Pedicels"],["accent","Page accent"],
-  ["leafTop","Leaf, top"],["leafUnder","Leaf, underside"],["leafVein","Veins"],["leafSplash","Splash"],["leafVarMargin","Margin variegation"],["leafVarCenter","Center variegation"],
-  ["leafEdge","Edge tint"],["leafSheenColor","Leaf sheen"],["leafFuzzColor","Leaf fuzz"],["leafPetiole","Petiole and stem"]];
+  ["leafTop","Leaf, top"],["leafUnder","Leaf, underside"],["leafVein","Light veins"],["leafSplash","Splash"],["leafMottleLight","Mottle, light"],["leafMottleDark","Mottle, dark"],["leafVarMargin","Margin variegation"],["leafVarCenter","Center variegation"],["leafMarginColor","Dark margin"],
+  ["leafEdge","Sun stress"],["leafSheenColor","Leaf sheen"],["leafFuzzColor","Leaf fuzz"],["leafPetiole","Petiole and stem"]];
 const SHAPE_PRESETS = {
   round:    {petalWidth:.80, roundness:.5,  petalInner:.5,  spacing:1.45},
   fat:      {petalWidth:.58, roundness:.14, petalInner:.14, spacing:1.18},
@@ -4393,7 +4904,34 @@ function leafInfo(p){
   /* what a leaf doesn't have wins over everything above */
   if(/\bno\b[^.]*\bcreases?\b/.test(t)) Object.assign(L, {leafFold:0, leafCup:0, leafPucker:0});
   if(/\b(no|without)\b[^.]*\bveins?\b/.test(t) || has("veins hidden")) Object.assign(L, {veinShow:0, veinCount:0, veinRelief:0});
-  return L;
+
+  return Object.assign(L, labFromReading(L, has, n));
+}
+/* the leaf engine's settings, read from the same notes: the vein framework and look, and the markings */
+function labFromReading(L, has, n){
+  const dark = L.leafVein === "#24420F", sg = dark ? -1 : 1, show = L.veinShow == null ? .15 : L.veinShow;
+  const basal = L.veinStyle > .5 ? (has("five") ? 2 : 1) : 0, parallel = (L.veinCount || 0) >= 12, none = show === 0;
+  const net = has("vein network", "white vein", "turtle", "network of"), pale = has("pale veins", "paler veins", "lighter veins", "white vein", "cream or light green veins", "pale side veins", "paler, raised");
+  const mottled = has("mottled"), top = L.leafTop || "#4A7A22";
+  let seed = 0; for(const c of n) seed = (seed * 31 + c.charCodeAt(0)) % 997;
+  return {
+    veinBasal: basal, veinReach: .88, veinWidth: net ? 1.3 : 1, veinCount: parallel ? 20 : basal ? 4 : 8,
+    veinAngleTop: parallel ? 52 : 45, veinAngle: parallel ? 62 : 65, veinDepart: .3, veinArch: parallel ? .12 : .55, veinArchSmooth: .4,
+    veinSpacing: parallel ? .15 : .5, veinIrregular: .35, veinAlternate: .5, veinEnd: parallel ? 1 : 0, veinLoop: .78, veinFestoon: 1, veinInter: .25, veinSecWidth: net ? .8 : .55,
+    veinTer: none ? 0 : net ? 1.05 : basal ? .7 : .45, veinNet: net ? .75 : basal ? .2 : .5, veinSinuous: .4,
+    veinAreole: net ? .45 : .35, veinAreoleAmt: none ? 0 : net ? .8 : Math.min(.35, show * .4), veinFev: net ? .5 : .3, veinMinorWidth: net ? 1.05 : .5,
+    veinMid: none ? .05 : sg * Math.min(1, .2 + show), veinSec: none ? 0 : sg * show * .95, veinMinor: net ? .75 : none ? 0 : sg * show * .3,
+    veinRelief: (L.veinRelief || 0) > 0 ? L.veinRelief * .9 : (L.veinRelief || 0) * 1.3, veinPillow: L.leafPucker ? .6 : .2,
+    leafMidGlow: .25, leafEdgeDark: .3, leafUneven: .25,
+    leafSplashAmt: mottled || net ? Math.min(.2, L.leafSplashAmt || 0) : (L.leafSplashAmt || 0), leafSplashSize: mottled ? .15 : (L.leafSplashSize == null ? .35 : L.leafSplashSize),
+    leafSplashVar: .5, leafSplashCluster: .4, leafSplashBlotch: has("splashes", "blotch") ? .5 : .15, leafSplashAvoid: .6, leafSplashEdge: .3,
+    leafMottle: mottled ? .55 : 0, leafMottleScale: .6, leafMottleSoft: .4,
+    leafMottleLight: mix(top, "#DDE5C8", .45).toUpperCase(), leafMottleDark: (/imbricata/.test(n) ? "#3E2C4A" : mix(top, "#000000", .35)).toUpperCase(),
+    leafVarRagged: .55, leafVarVeins: .4,
+    leafMarginAmt: has("darker edges") ? .6 : 0, leafMarginWidth: .25, leafMarginColor: mix(top, "#200A08", .6).toUpperCase(),
+    leafEdgeWidth: .6, leafStressPatch: .45, leafStressVeins: pale ? -.7 : -.3,
+    leafSeed: seed,
+  };
 }
 function baseSpec(p){
   const info = flowerInfo(p), shape = shapeOf(p).shape, pre = SHAPE_PRESETS[shape];
@@ -4427,6 +4965,12 @@ function savedSpec(p){
   if(o.aim == null && o.view != null) out.aim = o.view * 1.25 / (Math.PI / 2);
   /* designs saved before inner corners had their own control keep one roundness for both */
   if(o.petalInner == null && o.roundness != null) out.petalInner = o.roundness;
+  /* designs saved before the leaf engine: their vein contrast becomes the new per-order contrasts */
+  if(o.veinMid == null && o.veinShow != null){
+    const sg = lum(out.leafVein || "#C6DA7E") < .35 ? -1 : 1;
+    out.veinMid = sg * Math.min(1, .2 + o.veinShow); out.veinSec = sg * o.veinShow * .95; out.veinMinor = sg * o.veinShow * .3;
+    if(o.veinStyle != null) out.veinBasal = o.veinStyle > .5 ? 1 : 0;
+  }
   out.accentManual = o.accentManual === true;
   /* designs saved with a Sheen slider: full sheen is no roughness at all */
   if(o.roughness == null && o.sheen != null) out.roughness = Math.max(0, Math.min(1, 1 - o.sheen));
@@ -5216,11 +5760,14 @@ const F3D = (() => {
     float hn(vec2 q){ return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
     float vn2(vec2 q){ vec2 i = floor(q), f = fract(q); f = f*f*(3. - 2.*f);
       return mix(mix(hn(i), hn(i + vec2(1., 0.)), f.x), mix(hn(i + vec2(0., 1.)), hn(i + vec2(1., 1.)), f.x), f.y); }
+    uniform sampler2D leafTex; uniform float texOn; uniform vec2 texMap;
     uniform vec4 tint; uniform float lineMode; uniform vec3 fuzzCol; uniform vec3 sheenCol; uniform vec3 sheenCol2; uniform float shell; uniform float dens; uniform float hairRad;
     float h3(vec3 v){ return fract(sin(dot(v, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
     void main(){
       if(lineMode > .5){ gl_FragColor = vec4(tint.rgb * tint.a, tint.a); return; }
       vec3 col = gl_FrontFacing ? vc : vc * .82;
+      /* a leaf's top: its color, veins and markings from the leaf engine's texture, laid over the blade's flat map */
+      if(texOn > .5 && vlf.z > 1.5) col *= texture2D(leafTex, clamp(vec2(vlf.x*texMap.x + .5, 1. - vlf.y*texMap.y), .001, .999)).rgb;
       if(vfz > .001){
         if(shell > 0.0){
           /* on a surface laid flat for its hairs (z = -1), one hair per cell of an even grid over that flat map, so they
@@ -5556,12 +6103,22 @@ const F3D = (() => {
     const U = k => gl.getUniformLocation(pr, k);
     const loc = {p: gl.getAttribLocation(pr,"p"), c: gl.getAttribLocation(pr,"c"), al: gl.getAttribLocation(pr,"al"), n: gl.getAttribLocation(pr,"n"), fz: gl.getAttribLocation(pr,"fz"), sh: gl.getAttribLocation(pr,"sh"),
       m: U("m"), nm: U("nm"), tint: U("tint"), line: U("lineMode"), fuzzCol: U("fuzzCol"), shell: U("shell"), hairLen: U("hairLen"), dens: U("dens"), hairRad: U("hairRad"), sheenCol: U("sheenCol"), sheenCol2: U("sheenCol2"),
-      lf: gl.getAttribLocation(pr, "lf"), hd: gl.getAttribLocation(pr, "hd"), splash: U("splash"), splashCol: U("splashCol"), splashBase: U("splashBase")};
+      lf: gl.getAttribLocation(pr, "lf"), hd: gl.getAttribLocation(pr, "hd"), splash: U("splash"), splashCol: U("splashCol"), splashBase: U("splashBase"), leafTex: U("leafTex"), texOn: U("texOn"), texMap: U("texMap")};
     gl.getExtension("OES_element_index_uint");
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     const v0 = VIEWS[startView || "three"];
     const st = {yaw: v0[0], pitch: v0[1], ty: v0[0], tp: v0[1], wire: false, parts: [], raf: 0};
     /* a part is one mesh drawn once for each of its matrices */
+    /* a leaf texture on the GPU, with its smaller versions for leaves drawn small */
+    function upload(cv){
+      const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return tx;
+    }
     function makePart(m, mats, lines, shells, fzk){
       const mk = (target, data) => { const b = gl.createBuffer(); gl.bindBuffer(target, b); gl.bufferData(target, data, gl.STATIC_DRAW); return b; };
       return {p: mk(gl.ARRAY_BUFFER, m.P), c: mk(gl.ARRAY_BUFFER, m.C), a: m.A && m.A.length ? mk(gl.ARRAY_BUFFER, m.A) : null, fade: !!m.fade, i: mk(gl.ELEMENT_ARRAY_BUFFER, m.I), n: m.I.length, it: m.I instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT,
@@ -5569,10 +6126,11 @@ const F3D = (() => {
         r: lines && m.rim ? mk(gl.ELEMENT_ARRAY_BUFFER, m.rim) : null, nr: m.rim ? m.rim.length : 0, pale: m.pale, mats,
         nb: m.N && (m.fuzz || m.shiny) ? mk(gl.ARRAY_BUFFER, m.N) : null, fb: m.F && (m.fuzz || m.shiny) ? mk(gl.ARRAY_BUFFER, m.F) : null,
         sb: m.S && m.shiny ? mk(gl.ARRAY_BUFFER, m.S) : null, sheenCols: m.sheenCols, fuzz: m.fuzz, shells: !!(shells && m.fuzz), fzk: fzk || 1,
-        lb: m.LF ? mk(gl.ARRAY_BUFFER, m.LF) : null, hb: m.HD ? mk(gl.ARRAY_BUFFER, m.HD) : null, splash: m.splash};
+        lb: m.LF ? mk(gl.ARRAY_BUFFER, m.LF) : null, hb: m.HD ? mk(gl.ARRAY_BUFFER, m.HD) : null, splash: m.splash,
+        tex: m.tex ? upload(m.tex.canvas) : null, texMap: m.tex ? m.tex.map : null};
     }
     function setParts(list){
-      st.parts.forEach(pt => ["p","c","a","i","e","r","nb","fb","sb","lb","hb"].forEach(k => pt[k] && gl.deleteBuffer(pt[k])));
+      st.parts.forEach(pt => { ["p","c","a","i","e","r","nb","fb","sb","lb","hb"].forEach(k => pt[k] && gl.deleteBuffer(pt[k])); if(pt.tex) gl.deleteTexture(pt.tex); });
       st.parts = list; draw();
     }
     function draw(){
@@ -5598,6 +6156,8 @@ const F3D = (() => {
         else if(loc.lf >= 0){ gl.disableVertexAttribArray(loc.lf); gl.vertexAttrib3f(loc.lf, 0, 0, 0); gl.uniform4f(loc.splash, 0, 0, 0, 0); }
         if(loc.hd >= 0){ if(pt.hb){ gl.bindBuffer(gl.ARRAY_BUFFER, pt.hb); gl.enableVertexAttribArray(loc.hd); gl.vertexAttribPointer(loc.hd, 3, gl.FLOAT, false, 0, 0); }
           else { gl.disableVertexAttribArray(loc.hd); gl.vertexAttrib3f(loc.hd, 0, 0, 0); } }
+        if(pt.tex){ gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, pt.tex); gl.uniform1i(loc.leafTex, 0); gl.uniform1f(loc.texOn, 1); gl.uniform2fv(loc.texMap, pt.texMap); }
+        else gl.uniform1f(loc.texOn, 0);
         gl.uniform1f(loc.shell, 0);
         if(!pt.n){ continue; }
 
@@ -5676,7 +6236,7 @@ const F3D = (() => {
     still.umbel(c, seed, view === "three", view === "three");
     /* copy the picture into its own canvas: no image encoding, so it stays quick */
     const out = document.createElement("canvas"); out.width = out.height = px; out.getContext("2d").drawImage(still.canvas, 0, 0);
-    if(STILLS.size > 400) STILLS.clear();
+    while(STILLS.size >= 12) STILLS.delete(STILLS.keys().next().value);   /* a few recent pictures only: each is up to 1400 px square, about 8 MB */
     STILLS.set(key, out); return out;
   }
   const cached = (sp, seed, view) => { view = view || "front"; const ang = view === "three" ? heroAngle(sp) : null;
@@ -5689,7 +6249,7 @@ const F3D = (() => {
     if(!still1){ const c = document.createElement("canvas"); still1 = mount(c, "three", 520); if(!still1) return null; still1.canvas = c; }
     still1.update(sp);
     const out = document.createElement("canvas"); out.width = out.height = 520; out.getContext("2d").drawImage(still1.canvas, 0, 0);
-    if(STILLS1.size > 100) STILLS1.clear();
+    while(STILLS1.size >= 6) STILLS1.delete(STILLS1.keys().next().value);
     STILLS1.set(key, out); return out;
   }
   /* still pictures of a leaf (or a stem with its leaves) at three quarters, kept until the leaf's design changes */
@@ -5706,7 +6266,7 @@ const F3D = (() => {
     const d = ox.getImageData(0, 0, 760, 760).data; let x0 = 760, y0 = 760, x1 = -1, y1 = -1;
     for(let y=0;y<760;y+=2) for(let x=0;x<760;x+=2) if(d[(y*760 + x)*4 + 3] > 8){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; }
     if(x1 >= 0){ ox.clearRect(0, 0, 760, 760); ox.drawImage(stillL.canvas, Math.round(380 - (x0 + x1)/2), Math.round(380 - (y0 + y1)/2)); }
-    if(STILLSL.size > 100) STILLSL.clear();
+    while(STILLSL.size >= 6) STILLSL.delete(STILLSL.keys().next().value);
     STILLSL.set(key, out); return out;
   }
   /* ---------- leaves ----------
@@ -5763,6 +6323,58 @@ const F3D = (() => {
     const a = lhash(i, j), b = lhash(i+1, j), c = lhash(i, j+1), d = lhash(i+1, j+1);
     return a + (b - a)*sx + (c - a)*sy + (a - b - c + d)*sx*sy;
   }
+  /* the leaf engine's settings from a design */
+  function labParams(sp){
+    const n = (k, d) => sp[k] == null ? d : sp[k];
+    return {
+      seed: n("leafSeed", 7), aspect: n("leafAspect", .45), framework: n("veinBasal", 0) > 0 ? "acrodromous" : "pinnate", basalPairs: Math.max(1, Math.round(n("veinBasal", 1))),
+      acroReach: n("veinReach", .88), midribWidth: n("veinWidth", 1), midBend: 0, secCount: n("veinCount", 8), angleTop: n("veinAngleTop", 45), angleBase: n("veinAngle", 65),
+      secDepart: n("veinDepart", .3), secCurve: n("veinArch", .55), archSmooth: n("veinArchSmooth", .4), spacingGrowth: n("veinSpacing", .5), secIrregular: n("veinIrregular", .35),
+      secAlternate: n("veinAlternate", .5), ending: ["loops", "margin", "fade"][Math.max(0, Math.min(2, Math.round(n("veinEnd", 0))))], loopDist: n("veinLoop", .78),
+      festoon: Math.round(n("veinFestoon", 1)), interSec: n("veinInter", .25), secWidth: n("veinSecWidth", .55),
+      terDensity: n("veinTer", .45), terMode: n("veinNet", .5), terSinuous: n("veinSinuous", .4), areoleSize: n("veinAreole", .35), areoleStrength: n("veinAreoleAmt", .2),
+      fev: n("veinFev", .3), minorWidth: n("veinMinorWidth", .5),
+      cPrimary: n("veinMid", .4), cSecondary: n("veinSec", .3), cMinor: n("veinMinor", .1), veinTint: n("leafVein", "#C6DA7E"), relief: n("veinRelief", .1), pillow: n("veinPillow", .2),
+      base: n("leafTop", "#4A7A22"), midGlow: n("leafMidGlow", .25), edgeDark: n("leafEdgeDark", .3), colorNoise: n("leafUneven", .25),
+      splash: n("leafSplashAmt", 0), splashSize: n("leafSplashSize", .35), splashVar: n("leafSplashVar", .5), splashCluster: n("leafSplashCluster", .4), splashBlotch: n("leafSplashBlotch", .15),
+      splashAvoid: n("leafSplashAvoid", .6), splashEdge: n("leafSplashEdge", .3), splashColor: n("leafSplash", "#C8D3CE"), splashOpacity: .85,
+      mottle: n("leafMottle", 0), mottleScale: n("leafMottleScale", .6), mottleSoft: n("leafMottleSoft", .4), mottleLight: n("leafMottleLight", "#9DB57E"), mottleDark: n("leafMottleDark", "#3B3448"),
+      varMode: "none", varMargin: n("leafVarMarginAmt", 0), varCenter: n("leafVarCenterAmt", 0), varIrregular: n("leafVarRagged", .55), varVeins: n("leafVarVeins", .4),
+      varColor: n("leafVarMargin", "#EEE5C2"), varColorC: n("leafVarCenter", "#E3D36A"), varBand: mix(n("leafTop", "#4A7A22"), n("leafVarMargin", "#EEE5C2"), .5),
+      margin: n("leafMarginAmt", 0), marginWidth: n("leafMarginWidth", .25), marginColor: n("leafMarginColor", "#5A1E1A"),
+      stress: n("leafEdgeAmt", 0), stressColor: n("leafEdge", "#A22B2E"), stressEdge: n("leafEdgeWidth", .6), stressPatch: n("leafStressPatch", .45), stressVeins: n("leafStressVeins", -.3),
+      gloss: 0, rough: n("leafRoughness", .45) * .5, fuzz: 0, curvature: 0,
+    };
+  }
+  /* the leaf's texture: rendered once per design and kept. While someone is dragging a slider in the builder, a quick
+     low-resolution version stands in, and the full one follows as soon as they pause */
+  const LEAF_TEX = new Map(), LEAF_LO = new Map(); let texLast = 0, texTimer = 0, texN = 0;
+  const OUTLINE_KEYS = ["leafAspect","leafWidest","leafShoulder","leafBase","leafCordate","leafApex","leafTip","leafNotch"];
+  function leafTexture(sp, O){
+    if(typeof LeafEngine === "undefined") return null;
+    const P = labParams(sp), key = JSON.stringify(P) + "|" + OUTLINE_KEYS.map(k => sp[k]).join(",");
+    const hit = LEAF_TEX.get(key); if(hit) return hit;
+    const oc = {at: u => u <= 0 || u >= 1 ? 0 : O.outer(u)/O.L, inner: u => O.inner(u)/O.L, uBase: O.y0/O.L, uTop: Math.min(.985, O.y1/O.L - .012)};
+    oc.slope = u => (oc.at(Math.min(1, u + .002)) - oc.at(Math.max(0, u - .002)))/.004;
+    const make = H => {
+      const cv = LeafEngine.render(P, {view: "tex", H, outline: oc});
+      /* to a power-of-two canvas, so the GPU can build smaller versions for small, distant leaves */
+      const pw = v => Math.pow(2, Math.round(Math.log2(Math.max(64, v)))), pot = document.createElement("canvas");
+      pot.height = Math.min(1024, pw(H)); pot.width = Math.min(1024, pw(cv.width * pot.height / H));
+      pot.getContext("2d").drawImage(cv, 0, 0, pot.width, pot.height);
+      const Xm = cv.width / (2*H) * O.L;   /* the texture's half-width, in the leaf's own units */
+      return {canvas: pot, map: [O.W/(2*Xm), O.W/O.L], id: ++texN};
+    };
+    const now = performance.now(), busy = window.LEAF_TEX_LIVE && document.getElementById("builder") && now - texLast < 450; texLast = now;
+    if(busy){
+      const lo = LEAF_LO.get(key) || make(256); LEAF_LO.clear(); LEAF_LO.set(key, lo);   /* both leaf views share it */
+      clearTimeout(texTimer);
+      texTimer = setTimeout(() => { LEAF_TEX.set(key, make(768)); trimTex(); if(window.onLeafTex) window.onLeafTex(); }, 420);
+      return lo;
+    }
+    const full = make(768); LEAF_TEX.set(key, full); trimTex(); return full;
+  }
+  function trimTex(){ while(LEAF_TEX.size > 6) LEAF_TEX.delete(LEAF_TEX.keys().next().value); }
   function buildLeaf(sp){
     const O = leafOutline(sp), {L, W} = O, NU = 110, NV = 40;   /* fine across, so thin veins stay smooth */
     const col = k => hexRGB(sp[k] || "#3F6B3A");
@@ -5771,8 +6383,11 @@ const F3D = (() => {
     const g = k => sp[k] || 0;
     const fold = g("leafFold"), cup = g("leafCup"), arch = g("leafArch"), twist = g("leafTwist"), rev = g("leafRevolute"), wave = g("leafWave"),
       waves = sp.leafWaves == null ? 5 : sp.leafWaves, puck = g("leafPucker"), thick = sp.leafThick == null ? .12 : sp.leafThick;
-    const vStyle = g("veinStyle"), vN = Math.round(sp.veinCount == null ? 6 : sp.veinCount), vAng = (sp.veinAngle == null ? 50 : sp.veinAngle) * Math.PI/180,
-      vRel = g("veinRelief"), vShow = sp.veinShow == null ? .3 : sp.veinShow, vW = W*.035*(sp.veinWidth == null ? 1 : sp.veinWidth);
+    /* the top's color, veins and markings come from the leaf engine as a texture; the mesh keeps a soft version of the
+       main veins for the relief you see at the silhouette, and for the underside */
+    const LT = leafTexture(sp, O);
+    const vStyle = (sp.veinBasal || 0) > 0 ? .9 : 0, vN = Math.min(12, Math.round(sp.veinCount == null ? 6 : sp.veinCount)), vAng = (sp.veinAngle == null ? 50 : sp.veinAngle) * Math.PI/180,
+      vRel = g("veinRelief")*.5, vShow = Math.min(1, Math.abs(sp.veinMid == null ? .3 : sp.veinMid)), vW = W*.035*(sp.veinWidth == null ? 1 : sp.veinWidth);
     const splash = g("leafSplashAmt"), splSize = sp.leafSplashSize == null ? .4 : sp.leafSplashSize, varM = g("leafVarMarginAmt"), varC = g("leafVarCenterAmt"),
       edgeAmt = g("leafEdgeAmt"), edgeW = sp.leafEdgeWidth == null ? .3 : sp.leafEdgeWidth;
     /* veins: the midrib, plus pinnate laterals (curving up towards the apex and fading before the margin) and/or
@@ -5894,7 +6509,8 @@ const F3D = (() => {
           if(s > 0) z += h + vRel*W*.035*vein*ek; else z -= h + Math.abs(vRel)*W*.03*vv.mid*ek;   /* with relief, the midrib stands out underneath too */
           P.push(...place(x, y, z));
           let c;
-          if(s > 0){
+          if(s > 0 && LT) c = [255, 255, 255];   /* the texture carries the color */
+          else if(s > 0){
             c = top.slice();
             const jit = .14*(vnoise(u*9, side*3 + 7) - .5);
             if(varC > 0 && v < varC*.85 + jit && u > .04 && u < .96) c = mixc(c, vc, .9);
@@ -5943,7 +6559,7 @@ const F3D = (() => {
     const Ld = [-.35, .55, .76];
     for(let k=0;k<nv;k++){ const d = Math.max(0, NR[3*k]*Ld[0] + NR[3*k+1]*Ld[1] + NR[3*k+2]*Ld[2]), sh = .72 + .36*d; for(let a=0;a<3;a++) C[3*k+a] = Math.min(255, Math.round(C[3*k+a]*sh)); }
     const idx = a => nv > 65535 ? new Uint32Array(a) : new Uint16Array(a);
-    return {LF: new Float32Array(LF), splash: {amt: splash, size: splSize, ang: vAng, col: spl.map(v => v/255), base: top.map(v => v/255)},
+    return {tex: LT, LF: new Float32Array(LF), splash: {amt: LT ? 0 : splash, size: splSize, ang: vAng, col: spl.map(v => v/255), base: top.map(v => v/255)},
       P: new Float32Array(P), C: new Uint8Array(C), I: idx(I), E: idx(E), rim: idx(rim), N: NR, F: new Float32Array(F), S: new Float32Array(S), shiny: true,
       sheenCols: [hexRGB(sp.leafSheenColor || "#FFFFFF").map(v => v/255), [1,1,1]],
       fuzz: fz > 0 ? {col: hexRGB(sp.leafFuzzColor || "#E8E6DA").map(v => v/255), len: .006 + .04*(sp.leafFuzzLength == null ? .4 : sp.leafFuzzLength), dens: 1} : null,
@@ -6188,9 +6804,170 @@ function drawSpec(sp, seed, label, single){
 /* umbels are shown as 3D stills. A still that's ready is used straight away; otherwise the flat drawing
    stands in and is swapped for the 3D still as soon as it has been drawn (see hydrateUmbels). */
 function umbel(p, view){
-  const sp = specOf(p), label = "Umbel of flowers in the colors of " + p.name;
-  /* an empty, correctly sized space until the 3D still is ready; the flat drawing is used only without WebGL */
-  return `<span class="art art-wait" data-u="${esc(p.name)}"${view ? ` data-v="${view}"` : ""} role="img" aria-label="${esc(label)}"></span>`;
+  const label = "Umbel of flowers in the colors of " + p.name;
+  if(view === "thumb") return picImg(p, "thumb", "art art3d", label);
+  if(view === "three") return picImg(p, "three", "nu-sh nu-mul", "", true) + picImg(p, "three", "nu-sh nu-ovl", "", true) + picImg(p, "three", "art art3d", label);
+  return picImg(p, "front", "art art3d", label);
+}
+/* ---------- pictures ----------
+   The home and hoya pages show PNG pictures, never live 3D: the 3D models are kept for the flower builder.
+   A plant with a saved design shows the pictures saved with it (uploaded to the site's assets when the design was
+   saved); every other plant shows the pictures that ship with the site, drawn from its photo-based design.
+   RENDER_V goes up whenever the 3D drawing itself changes, so older pictures are drawn again */
+const RENDER_V = 1, RENDERS_V = 3, PIC_KINDS = ["front", "three", "flower", "leaf", "thumb"];
+function picSrc(p, kind){
+  const o = OVERRIDES[p.name];
+  if(o && o.images){ const id = o.images[kind] || (kind === "thumb" && o.images.front); if(id) return "/_blob/" + id; }
+  return "renders/" + slug(p.name) + "-" + kind + ".webp?v=" + RENDERS_V;
+}
+/* ---------- local picture store ----------
+   Every picture is kept in this browser (IndexedDB) once it has been seen, so later visits draw it straight from
+   the device instead of the network. The last saved designs are kept too, so saved pictures show from the first frame.
+   Bundled pictures carry RENDERS_V in their address and uploaded ones a fresh id, so a changed picture is never
+   mistaken for an old one; pictures no longer used are cleared once the saved designs arrive */
+const PIC_LOCAL = new Map();   /* picture address -> object URL of the copy kept in this browser */
+/* the addresses kept are listed in localStorage too, so the early start (in the head) and the first page know about them at once */
+let noteLocalT = 0;
+function noteLocal(){ clearTimeout(noteLocalT); noteLocalT = setTimeout(() => { try{ localStorage.setItem("hoya-pics-local", JSON.stringify([...PIC_LOCAL.keys()])); }catch(e){} }, 300); }
+const PicStore = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try{ const r = indexedDB.open("hoya-pics", 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore("pics"); r.result.createObjectStore("meta"); };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }catch(e){ rej(e); }
+  }));
+  const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction(store, mode), s = t.objectStore(store), out = fn(s);
+    t.oncomplete = () => res(out && "result" in out ? out.result : undefined); t.onerror = t.onabort = () => rej(t.error); }); };
+  return {
+    async load(){
+      const [keys, vals, flowers] = await Promise.all([
+        tx("pics", "readonly", s => s.getAllKeys()), tx("pics", "readonly", s => s.getAll()), tx("meta", "readonly", s => s.get("flowers"))]);
+      keys.forEach((k, i) => { if(vals[i] instanceof Blob && vals[i].size) PIC_LOCAL.set(k, URL.createObjectURL(vals[i])); });
+      noteLocal();
+      return flowers || null;
+    },
+    put: (src, blob) => tx("pics", "readwrite", s => s.put(blob, src)).then(noteLocal),
+    drop: srcs => tx("pics", "readwrite", s => srcs.forEach(k => s.delete(k))),
+    keep: flowers => tx("meta", "readwrite", s => s.put(flowers, "flowers")),
+    async prune(valid){ const keys = await tx("pics", "readonly", s => s.getAllKeys());
+      const gone = keys.filter(k => !valid.has(k)); if(gone.length) await tx("pics", "readwrite", s => gone.forEach(k => s.delete(k)));
+      gone.forEach(k => { const u = PIC_LOCAL.get(k); if(u){ URL.revokeObjectURL(u); PIC_LOCAL.delete(k); } }); noteLocal(); }
+  };
+})();
+/* a picture that came from the network is copied into the local store when the browser is idle */
+const PIC_SAVING = new Set();
+function keepPicture(src){
+  if(PIC_LOCAL.has(src) || PIC_SAVING.has(src)) return; PIC_SAVING.add(src);
+  idle().then(() => fetch(src)).then(r => r.ok ? r.blob() : null).then(b => {
+    if(b && b.size && b.type.startsWith("image/")) return PicStore.put(src, b).then(() => PIC_LOCAL.set(src, URL.createObjectURL(b)));
+  }).catch(() => {}).finally(() => PIC_SAVING.delete(src));
+}
+function pruneLocalPictures(){
+  const valid = new Set(); DATA.forEach(p => PIC_KINDS.forEach(k => valid.add(picSrc(p, k))));
+  idle().then(() => PicStore.prune(valid)).catch(() => {});
+}
+const PIC_SEEN = new Set();   /* pictures already shown once: drawn again (a re-render), they appear at once instead of fading in again */
+function picImg(p, kind, cls, label, hidden){
+  const src = picSrc(p, kind);
+  return `<img class="${cls} art-png${PIC_SEEN.has(src) ? " on" : ""}" src="${esc(PIC_LOCAL.get(src) || src)}" data-src="${esc(src)}" ${hidden ? `alt="" aria-hidden="true"` : `alt="${esc(label)}"`} decoding="async"${cls === "art art3d" && kind === "three" ? ` fetchpriority="high"` : ""} data-pic="${esc(p.name)}" data-kind="${kind}">`;
+}
+/* a picture fades in once loaded; if one can't be loaded, the flat drawing stands in for an umbel */
+document.addEventListener("load", e => { const el = e.target; if(el.classList && el.classList.contains("art-png")){ el.classList.add("on"); const src = el.dataset.src; PIC_SEEN.add(src); keepPicture(src); } }, true);
+/* when saved designs change, only the pictures (and tile colors) of the plants that changed are swapped, in place: the
+   new picture is loaded first, so the old one stays until it can be replaced, and nothing else on the page is redrawn */
+function swapPictures(names){
+  for(const name of names){
+    const p = DATA.find(x => x.name === name); if(!p) continue;
+    document.querySelectorAll(`img.art-png[data-pic="${CSS.escape(name)}"]`).forEach(el => {
+      const src = picSrc(p, el.dataset.kind); if(el.dataset.src === src) return;
+      const url = PIC_LOCAL.get(src) || src;
+      const pre = new Image(); pre.onload = () => { PIC_SEEN.add(src); el.dataset.src = src; el.src = url; el.classList.add("on"); }; pre.src = url;
+    });
+    const tile = document.querySelector(`a.tile-link[href="#${slug(name)}"]`), c = accentOf(name);
+    if(tile && c){ tile.style.setProperty("--c", c); tile.style.setProperty("--on", lum(c) > .4 ? "#000000" : "#FFFFFF"); tile.style.setProperty("--art-f", lum(c) > .4 ? "brightness(.55) saturate(1.2)" : "brightness(2.4) saturate(.6)"); }
+  }
+}
+document.addEventListener("error", e => {
+  const el = e.target; if(!el.classList || !el.classList.contains("art-png")) return;
+  if(el.dataset.src && el.getAttribute("src") !== el.dataset.src){ el.src = el.dataset.src; return; }
+  const p = DATA.find(x => x.name === el.dataset.pic);
+  if(p && el.classList.contains("art") && el.dataset.kind !== "flower" && el.dataset.kind !== "leaf") el.outerHTML = drawSpec(specOf(p), p.name, el.getAttribute("alt") || "", false);
+  else el.remove();
+}, true);
+/* a short fingerprint of everything a picture shows, so pictures that no longer match their design are drawn again */
+function designKey(sp){
+  const keep = {}; Object.keys(sp).sort().forEach(k => { if(!/^(accent|accentManual|plant|updatedAt|images)$/.test(k)) keep[k] = sp[k]; });
+  const s = RENDER_V + "|" + JSON.stringify(keep); let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+/* draws the four pictures of a design with the hidden 3D renderers, as PNG files */
+async function drawPictures(name, sp){
+  const live = window.LEAF_TEX_LIVE; window.LEAF_TEX_LIVE = false;   /* always the full-resolution leaf */
+  const cv = {front: F3D.stillOf(sp, name, "front"), three: F3D.stillOf(sp, name, "three"), flower: F3D.flowerStill(sp), leaf: F3D.leafStill(sp, true)};
+  window.LEAF_TEX_LIVE = live;
+  if(cv.front){ const t = document.createElement("canvas"); t.width = t.height = 216; const g = t.getContext("2d");
+    g.imageSmoothingQuality = "high"; g.drawImage(cv.front, 0, 0, 216, 216); cv.thumb = t; }
+  const out = {};
+  for(const k of PIC_KINDS){
+    if(!cv[k]) throw new Error("no WebGL");
+    out[k] = await new Promise((res, rej) => cv[k].toBlob(b => b ? res(b) : rej(new Error("toBlob")), "image/webp", .88));
+  }
+  return out;
+}
+/* uploads a design's pictures and returns their ids, with the fingerprint they were drawn from */
+async function uploadPictures(name, sp){
+  const assets = window.claude && window.claude.use ? await window.claude.use("assets") : null;
+  if(!assets) throw new Error("no assets");
+  const blobs = await drawPictures(name, sp), ids = {key: designKey(sp)};
+  for(const k of PIC_KINDS){ const r = await assets.upload(blobs[k]); ids[k] = r.id; }
+  /* the freshly drawn pictures go straight into this browser's store, so they show at once without a download */
+  for(const k of PIC_KINDS){ const src = "/_blob/" + ids[k];
+    try{ PIC_LOCAL.set(src, URL.createObjectURL(blobs[k])); PicStore.put(src, blobs[k]).catch(() => {}); }catch(e){} }
+  return ids;
+}
+/* replaced pictures leave this browser's store too */
+function forgetLocal(srcs){
+  srcs.forEach(src => { const u = PIC_LOCAL.get(src); if(u){ URL.revokeObjectURL(u); PIC_LOCAL.delete(src); } }); noteLocal();
+  if(srcs.length) PicStore.drop(srcs).catch(() => {});
+}
+async function dropPictures(images, keep){
+  if(!images) return;
+  const kept = keep ? Object.values(keep) : [];
+  forgetLocal(PIC_KINDS.map(k => images[k]).filter(id => id && !kept.includes(id)).map(id => "/_blob/" + id));
+  try{ const assets = await window.claude.use("assets"); if(!assets) return;
+    for(const k of PIC_KINDS){ const id = images[k]; if(id && !(keep && Object.values(keep).includes(id))) await assets.delete(id).catch(() => {}); } }catch(e){}
+}
+/* the owner's browser keeps saved designs' pictures up to date: any saved design whose pictures are missing or were
+   drawn from different settings (or an older version of the 3D drawing) is drawn again, one at a time, in the background */
+let picSyncRunning = false, picSyncTimer = 0; const PIC_TRIED = new Set();
+function schedulePicSync(){ clearTimeout(picSyncTimer); picSyncTimer = setTimeout(syncPictures, 4000); }
+const idle = () => new Promise(r => {
+  const go = () => (window.requestIdleCallback ? requestIdleCallback(() => r(), {timeout: 3000}) : setTimeout(r, 200));
+  if(document.hidden){ const v = () => { if(!document.hidden){ document.removeEventListener("visibilitychange", v); go(); } }; document.addEventListener("visibilitychange", v); } else go();
+});
+async function syncPictures(){
+  if(picSyncRunning || !DB || CAN_SAVE !== true) return;
+  /* not while someone is editing in the builder: the builder's own 3D views come first */
+  if(location.hash.startsWith("#build")){ schedulePicSync(); return; }
+  const todo = DATA.filter(p => { const o = OVERRIDES[p.name]; return o && !PIC_TRIED.has(p.name) && (!o.images || !o.images.thumb || o.images.key !== designKey(savedSpec(p))); });
+  if(!todo.length) return;
+  picSyncRunning = true;
+  for(const p of todo){
+    await new Promise(r => setTimeout(r, 1500)); await idle();
+    if(location.hash.startsWith("#build")){ schedulePicSync(); break; }
+    PIC_TRIED.add(p.name);   /* each plant at most once per visit, so a failure can't loop */
+    const o = OVERRIDES[p.name]; if(!o) continue;
+    const sp = savedSpec(p);
+    try{
+      const ids = await uploadPictures(p.name, sp);
+      await DB.doc("flowers/" + slug(p.name)).set(Object.assign({}, o, {images: ids}));
+      await dropPictures(o.images, ids);
+    }catch(e){ break; }
+  }
+  picSyncRunning = false;
 }
 let hydrateRun = 0;
 function hydrateUmbels(){
@@ -6377,7 +7154,7 @@ function fillGrid(){
     const c = accentOf(p.name), vars = c ? `--c:${c}; --on:${lum(c) > .4 ? "#000000" : "#FFFFFF"}; --art-f:${lum(c) > .4 ? "brightness(.55) saturate(1.2)" : "brightness(2.4) saturate(.6)"}` : "";
     return `<a class="tile tile-link${p.status==="Dead"?" is-dead":""}" href="#${slug(p.name)}" style="${vars}">
       <span class="swatch" aria-hidden="true"></span>
-      ${umbel(p)}
+      ${umbel(p, "thumb")}
       <div><h3>${esc(p.name)}</h3></div>
       <div class="meta"><span class="origin-mini">${esc(originShort(p.origin))}</span>${statusIcon(p)}
 </div>
@@ -6666,11 +7443,10 @@ function renderPlant(p){
     const lines = txt.split(/\n+|(?<=\.)\s+|,\s+/).map(x => x.trim().replace(/\.$/, "")).filter(x => x && KEY.test(x)).map(x => x[0].toUpperCase() + x.slice(1));   /* only the parts that speak of the scent */
     const notes = sc.note.startsWith("Also: ") ? [sc.word, ...sc.note.slice(6).split(", ").map(x => x[0].toUpperCase() + x.slice(1).replace("-blossom", " blossom"))] : [];
     const desc = lines.filter(l => l.toLowerCase() !== sc.word.toLowerCase() && !/^(\w+ )?scent$/i.test(l));
-    const more = notes.length > 1 || desc.length > 0;
-    if(!more) return `<div class="tile scent-face">${scentRibbon(p, sc)}<span class="vh">Scent</span><div class="word">${esc(sc.word)}</div></div>`;
+    /* the plus is always shown, even for a single note, so every scent card opens the same way */
     return `<div class="tile origin-tile has-more"><div class="oc">
         <div class="oc-face oc-front scent-face">${scentRibbon(p, sc)}<span class="vh">Scent</span><button type="button" class="oc-btn" aria-expanded="false" aria-label="Show more about the scent"><i></i></button><div class="word">${esc(sc.word)}</div></div>
-        <div class="oc-face oc-back" aria-hidden="true"><button type="button" class="oc-btn" aria-label="Show only the main scent" tabindex="-1"><i></i></button>
+        <div class="oc-face oc-back scent-back" aria-hidden="true"><button type="button" class="oc-btn" aria-label="Show only the main scent" tabindex="-1"><i></i></button>
           <div class="sr-back" data-sr="${esc(p.name)}">${scentRibbon(p, sc, false, {id: "srb"})}</div><h3 class="label oc-title">Scent</h3>
           ${notes.length > 1 ? `<ul class="oc-list">${notes.map((x, i) => `<li style="--i:${i + 1}">${esc(x)}</li>`).join("")}</ul>` : `<ul class="oc-list"><li style="--i:1">${esc(sc.word)}</li></ul>`}${desc.length ? `<p class="sub" style="--i:${Math.max(1, notes.length)}">${esc(desc.join(". "))}</p>` : sc.note && !notes.length ? `<p class="sub" style="--i:1">${esc(sc.note)}</p>` : ""}</div>
       </div></div>`; })();
@@ -6695,7 +7471,7 @@ function renderPlant(p){
     <div class="tile"><p class="stat-ico" title="Temperature">${icon("temp")}<span class="vh">Temperature</span></p>${tempTile}</div>
     <div class="tile"><p class="stat-ico" title="Humidity">${icon("humidity")}<span class="vh">Humidity</span></p>${humTile}</div>
     ${scentBox}
-    ${(() => { const o = (p.origin || "").trim(), sh = originShort(p.origin), op = originPlaces(o), more = op.places.length > 1 || !!op.note, geo = geoOf(o);
+    ${(() => { const o = (p.origin || "").trim(), sh = originShort(p.origin), op = originPlaces(o), more = true /* the plus shows even for a single place */, geo = geoOf(o);
       if(!o) return `<div class="tile globe-face">${globeSVG([], "pin")}<span class="vh">Origin</span><div class="word none">No origin data</div></div>`;
       /* the front shows the first place on the globe; the plus flips the card over, lifts it and opens it out to the whole
          globe with every place lit, and the list of places */
@@ -6805,12 +7581,17 @@ const SECTIONS = [
     ["Stalks", ["pediLength","pediThick","pedLength"]],
     ["Calyx", ["calyxSize","calyxBulge"]]]},
   /* leaves: their own view too, with a single leaf and an opposite pair in place of the flower stages */
-  {k:"leaf",        label:"Leaves", colors:["leafTop","leafUnder","leafVein","leafSplash","leafVarMargin","leafVarCenter","leafEdge","leafSheenColor","leafFuzzColor","leafPetiole"], groups:[
+  {k:"leaf",        label:"Leaves", colors:["leafTop","leafUnder","leafVein","leafSplash","leafMottleLight","leafMottleDark","leafVarMargin","leafVarCenter","leafMarginColor","leafEdge","leafSheenColor","leafFuzzColor","leafPetiole"], groups:[
     ["Outline", ["leafAspect","leafWidest","leafShoulder","leafBase","leafCordate","leafApex","leafTip","leafNotch"]],
     ["Form", ["leafFold","leafCup","leafArch","leafTwist","leafRevolute","leafWave","leafWaves","leafPucker","leafThick"]],
-    ["Veins", ["veinStyle","veinCount","veinAngle","veinWidth","veinShow","veinRelief"]],
-    ["Surface", ["leafRoughness","leafFuzz","leafFuzzLength"]],
-    ["Markings", ["leafSplashAmt","leafSplashSize","leafVarMarginAmt","leafVarCenterAmt","leafEdgeAmt","leafEdgeWidth"]],
+    ["Main veins", ["veinBasal","veinReach","veinWidth","veinCount","veinAngleTop","veinAngle","veinDepart","veinArch","veinArchSmooth","veinSpacing","veinIrregular","veinAlternate"]],
+    ["Vein endings", ["veinEnd","veinLoop","veinFestoon","veinInter","veinSecWidth"]],
+    ["Minor veins", ["veinTer","veinNet","veinSinuous","veinAreole","veinAreoleAmt","veinFev","veinMinorWidth"]],
+    ["Vein look", ["veinMid","veinSec","veinMinor","veinRelief","veinPillow"]],
+    ["Surface", ["leafRoughness","leafFuzz","leafFuzzLength","leafMidGlow","leafEdgeDark","leafUneven"]],
+    ["Splash", ["leafSplashAmt","leafSplashSize","leafSplashVar","leafSplashCluster","leafSplashBlotch","leafSplashAvoid","leafSplashEdge"]],
+    ["Mottle and variegation", ["leafMottle","leafMottleScale","leafMottleSoft","leafVarMarginAmt","leafVarCenterAmt","leafVarRagged","leafVarVeins"]],
+    ["Margin and sun stress", ["leafMarginAmt","leafMarginWidth","leafEdgeAmt","leafEdgeWidth","leafStressPatch","leafStressVeins","leafSeed"]],
     ["Petiole and stem", ["leafPerNode","leafAttach","leafBlade","leafRoll","petioleLength","petioleThick","stemThick"]]]},
   /* the hoya page's name box: its own view, showing the preview in place of the flower stages */
   {k:"hero",        label:"Name box", colors:["accent"], groups:[
@@ -6986,6 +7767,8 @@ function drawBuilder(){
     drawPending = false;
     const sp = B.spec, el = document.getElementById("b-cluster"); if(!el) return;
     const leafMode = B.section === "leaf", fkey = JSON.stringify(F3D.flowerOnly(sp)), flowerSame = fkey === B.lastFlower;
+    window.LEAF_TEX_LIVE = leafMode;   /* the leaf texture may use a quick stand-in while sliders move */
+    window.onLeafTex = () => { if(B.section === "leaf" && document.getElementById("builder")) drawBuilder(); };
     if(!leafMode) B.lastFlower = fkey;
     /* in the Leaves tab the flower views are hidden, and the flower is only rebuilt when a flower setting changed */
     if(leafMode || flowerSame){}
@@ -7122,22 +7905,29 @@ function bindBuilder(p){
 }
 async function saveDesign(){
   if(!DB || B.busy) return;
-  B.busy = true; B.msg = "Saving…"; updateStatus();
+  B.busy = true; B.msg = "Drawing the pictures…"; updateStatus();
   const body = Object.assign({}, B.spec, {plant:B.plant.name, updatedAt:new Date().toISOString()});
+  const old = OVERRIDES[B.plant.name] && OVERRIDES[B.plant.name].images;
+  let pics = null;
+  try{ pics = await uploadPictures(B.plant.name, B.spec); body.images = pics; }catch(e){}
+  B.msg = "Saving…"; updateStatus();
   try{
     await DB.doc("flowers/" + slug(B.plant.name)).set(body);
-    OVERRIDES[B.plant.name] = body; B.saved = Object.assign({}, B.spec); B.msg = "Saved. The site now uses this design.";
+    OVERRIDES[B.plant.name] = body; B.saved = Object.assign({}, B.spec);
+    B.msg = pics ? "Saved. The home and hoya pages now show the new pictures." : "Saved. The pictures couldn't be updated; they'll be drawn again on your next visit.";
+    if(pics) dropPictures(old, pics);
   }catch(e){
+    if(pics) dropPictures(pics);
     if(e && e.code === "invalid_argument"){ CAN_SAVE = false; B.msg = "This view can't save designs."; }
     else B.msg = "Couldn't save just now. Try again in a moment.";
   }
-  B.busy = false; updateStatus(); setTimeout(()=>{ B.msg = ""; updateStatus(); }, 3500);
+  B.busy = false; updateStatus(); setTimeout(()=>{ B.msg = ""; updateStatus(); }, 4500);
 }
 async function resetDesign(){
   if(B.busy) return;
   if(isCustom(B.plant) && DB){
     B.busy = true; B.msg = "Removing the saved design…"; updateStatus();
-    try{ await DB.doc("flowers/" + slug(B.plant.name)).delete(); delete OVERRIDES[B.plant.name]; B.msg = "Back to the photo-based design."; }
+    try{ const old = OVERRIDES[B.plant.name] && OVERRIDES[B.plant.name].images; await DB.doc("flowers/" + slug(B.plant.name)).delete(); delete OVERRIDES[B.plant.name]; dropPictures(old); B.msg = "Back to the photo-based design."; }
     catch(e){ B.msg = "Couldn't remove it just now. Try again in a moment."; }
     B.busy = false;
   }
@@ -7157,19 +7947,30 @@ async function resetDesign(){
       if(user && user.isOwner){ const o = await user.isOwner(); CAN_SAVE = o === null ? null : !!o; }
     }catch(e){}
     if(!db){ clearTimeout(timer); if(B.plant) updateStatus(); return; }
+    let snapSeen = false;
     db.collection("flowers").onSnapshot(snap => {
       clearTimeout(timer);
       const next = {};
       snap.docs.forEach(d => { const v = d.data(); if(v && v.plant) next[v.plant] = v; });
-      const changed = JSON.stringify(next) !== JSON.stringify(OVERRIDES);
+      const names = [...new Set(Object.keys(next).concat(Object.keys(OVERRIDES)))].filter(n => JSON.stringify(next[n]) !== JSON.stringify(OVERRIDES[n]));
+      const changed = names.length > 0;
       OVERRIDES = next;
+      try{ PicStore.keep(next).catch(() => {}); }catch(e){}
+      try{ const m = {}; Object.keys(next).forEach(n => { const p = DATA.find(x => x.name === n); if(p && next[n].images){ m[slug(n)] = {}; ["three", "front", "flower", "leaf"].forEach(k => m[slug(n)][k] = picSrc(p, k)); } });
+        localStorage.setItem("hoya-pic-srcs", JSON.stringify(m)); }catch(e){}
+      /* designs saved from another device: their old pictures are cleared from this browser and the new ones kept as they load */
+      if(!snapSeen || changed){ snapSeen = true; pruneLocalPictures(); }
+      schedulePicSync();
       if(!changed) { if(B.plant) updateStatus(); return; }
       const id = location.hash.slice(1);
       if(id.startsWith("build")){
         /* keep unsaved work; refresh what "saved" means */
         if(B.plant){ const wasDirty = !sameSpec(B.spec, B.saved); B.saved = specOf(B.plant); if(!wasDirty) { B.spec = Object.assign({}, B.saved); syncControls(); drawBuilder(); } updateStatus(); }
-      } else if(document.activeElement && document.activeElement.id === "q"){ fillGrid(); }
-      else route(true);
+      } else {
+        const p = DATA.find(x => slug(x.name) === id);
+        /* a hoya page is redrawn only when its own design changed; the home page swaps just the changed tiles */
+        if(p && names.includes(p.name)) route(true); else swapPictures(names);
+      }
     }, () => { clearTimeout(timer); if(B.plant) updateStatus(); });
     if(B.plant) updateStatus();
   }catch(e){ DB_READY = true; if(B.plant) updateStatus(); }
@@ -7267,19 +8068,12 @@ function fitSoil(){
 /* the single flower in the Bloom tile: a still picture at three quarters */
 function mountBloom(p){
   const slot = document.getElementById("bloom-3d"); if(!slot) return;
-  const src = F3D.flowerStill(specOf(p)); if(!src) return;
-  const c = document.createElement("canvas"); c.className = "bloom-canvas"; c.width = src.width; c.height = src.height;
-  c.getContext("2d").drawImage(src, 0, 0); slot.appendChild(c);
+  slot.innerHTML = picImg(p, "flower", "bloom-canvas", "One " + p.name + " flower");
 }
-/* the leaves: one leaf beside the notes, and a length of stem with its leaves in its own tile, both still pictures */
+/* the leaves: a length of stem with its leaves, as a picture */
 function mountLeaves(p){
-  const sp = specOf(p);
-  [["leaf-pair", true]].forEach(([id, pair]) => {
-    const slot = document.getElementById(id); if(!slot) return;
-    const src = F3D.leafStill(sp, pair); if(!src) return;
-    const c = document.createElement("canvas"); c.className = "bloom-canvas art-in"; c.width = src.width; c.height = src.height;
-    c.getContext("2d").drawImage(src, 0, 0); slot.appendChild(c);
-  });
+  const slot = document.getElementById("leaf-pair"); if(!slot) return;
+  slot.innerHTML = picImg(p, "leaf", "bloom-canvas", "A length of " + p.name + " stem with its leaves");
 }
 function route(instant){
   const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);
@@ -7310,7 +8104,15 @@ function fitType(){
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitType);
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { fitType(); moveSegThumb(true); }, 120); });
 window.addEventListener("hashchange", () => route(false));
-syncThemeLabel(); route(true);
+syncThemeLabel();
+/* the first page waits briefly for the pictures and saved designs kept in this browser, never longer than 400ms;
+   when nothing has been kept yet (a first visit) it doesn't wait at all */
+let hasLocal = false; try{ hasLocal = JSON.parse(localStorage.getItem("hoya-pics-local") || "[]").length > 0; }catch(e){}
+if(!hasLocal) PicStore.load().catch(() => {});
+(hasLocal ? Promise.race([
+  PicStore.load().then(f => { if(f && !Object.keys(OVERRIDES).length) OVERRIDES = f; }).catch(() => {}),
+  new Promise(r => setTimeout(r, 400))
+]) : Promise.resolve()).then(() => route(true));
 </script>
 </body>
 </html>
