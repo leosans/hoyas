@@ -42,7 +42,8 @@ V = fp.hexdigest()[:8]
 # 1. the 3D renderer, the flat fallback drawing, the builder and the database
 cut("const F3D = (() => {", "flowerOnly};\n})();\n", keep_end=False)
 cut("/* Even spacing over the dome", "/* umbels are shown as 3D stills.")
-cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */")
+cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */",
+    "/* the builder's tab indicator; other code still asks to move it (resize, language), so it stays, empty */\nfunction moveSegThumb(){}\n")
 drop_line("const PHOTOS = ")
 # placeholders that the renderer used to fill in are never made now
 cut("let hydrateRun = 0;\nfunction hydrateUmbels(){", "  requestAnimationFrame(step);\n}\n", "function hydrateUmbels(){}\n", keep_end=False)
@@ -78,7 +79,6 @@ sub('  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id
     '  if(/^#build/.test(location.hash)){ history.replaceState(null, "", "#" + location.hash.slice(1).replace(/^build-?/, "")); }\n'
     '  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);')
 drop_line('document.getElementById("builder-link")')
-sub("fitType(); moveSegThumb(true); }", "fitType(); }")
 drop_line('id="builder-link"')
 
 # 5. saved designs written into the page (without the artifact's picture ids), and each plant worked out once
