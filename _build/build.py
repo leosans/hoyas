@@ -12,7 +12,7 @@ The artifact already shows pictures rather than live 3D. For the published site 
 - writes the saved designs and the soil drawing into the page, and works out each plant's design (and accent) once.
 Every cut checks its markers, so a changed artifact fails loudly instead of building a broken page.
 """
-import glob, hashlib, json, os, sys
+import re, glob, hashlib, json, os, sys
 
 src, designs, dst, renders = sys.argv[1:5]
 h = open(src, encoding="utf-8").read()
@@ -42,8 +42,11 @@ V = fp.hexdigest()[:8]
 # 1. the 3D renderer, the flat fallback drawing, the builder and the database
 cut("const F3D = (() => {", "flowerOnly};\n})();\n", keep_end=False)
 cut("/* Even spacing over the dome", "/* umbels are shown as 3D stills.")
-cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */",
-    "/* the builder's tab indicator; other code still asks to move it (resize, language), so it stays, empty */\nfunction moveSegThumb(){}\n")
+# the segmented-control thumb (stretchThumb, slideSeg, moveSegThumb) sits in the builder's code but the home page uses it
+seg_i = h.find("/* a segmented control's thumb stretches"); seg_j = h.find("function renderBuilder(p){", seg_i)
+assert 0 <= seg_i < seg_j, "segmented-control code not found"
+seg_code = h[seg_i:seg_j]
+cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */", seg_code)
 drop_line("const PHOTOS = ")
 # placeholders that the renderer used to fill in are never made now
 cut("let hydrateRun = 0;\nfunction hydrateUmbels(){", "  requestAnimationFrame(step);\n}\n", "function hydrateUmbels(){}\n", keep_end=False)
@@ -53,8 +56,12 @@ sub('  if(p && el.classList.contains("art") && el.dataset.kind !== "flower" && e
 
 # 2. every picture from renders/, versioned by the pictures themselves
 sub('  if(o && o.images){ const id = o.images[kind] || (kind === "thumb" && o.images.front); if(id) return "/_blob/" + id; }\n', "")
-sub("RENDERS_V = 3,", f'RENDERS_V = "{V}",')
-sub('("renders/" + id + "-" + k + ".webp?v=3")', f'("renders/" + id + "-" + k + ".webp?v={V}")')
+# the artifact's own version numbers change from time to time, so match any
+def resub(pat, new):
+    global h
+    h, n = re.subn(pat, lambda _: new, h); assert n == 1, f"expected 1x, found {n}x: {pat!r}"
+resub(r"RENDERS_V = \d+,", f'RENDERS_V = "{V}",')
+resub(r'\("renders/" \+ id \+ "-" \+ k \+ "\.webp\?v=\d+"\)', f'("renders/" + id + "-" + k + ".webp?v={V}")')
 
 # 3. the shadow behind the name: the shared grain masked by the plant's baked shade, at the filter's 10%, over the
 #    filter's region (150%, centered); it fades in with the umbel. The SVG filter goes.
@@ -71,10 +78,20 @@ sub(".nu-mul{mix-blend-mode:multiply}",
 cut("<!-- the umbel shadow behind the hoya name", "</filter></svg>\n", keep_end=False)
 assert "#nu-shadow" not in h
 
+# 3b. no design system page: its styles, header button, code and route go; #design opens the home page
+cut("/* ===== design system page (#design) ===== */", "</style>")
+drop_line('id="design-link"')
+cut("/* ---------- design system (#design)", "function route(instant){")
+sub('    if(id === "design"){ B.plant = null; view.innerHTML = renderDesign(); bindDesign(); document.title = "Design system · Hoya Collection"; }\n    else if(id === "build"',
+    '    if(id === "build"')
+sub('id === "design" ? "design" : (id', '(id')
+for gone in ("renderDesign", "bindDesign", "dsValues", 'href="#design"', "design-link"):
+    assert gone not in h, f"design system still referenced: {gone}"
+
 # 4. routing: no builder page; old builder links open the plant (or the home page)
 sub('    if(id === "build" || id.startsWith("build-")){ const bp = builderPlant(id); view.innerHTML = renderBuilder(bp); bindBuilder(bp); document.title = "Flower builder · " + bp.name; }\n    else if(p){ B.plant = null; ',
     '    if(p){ ')
-sub('    else { B.plant = null; view.innerHTML = renderHome();', '    else { view.innerHTML = renderHome();')
+sub('    else { B.plant = null; ', '    else { ')
 sub('  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);',
     '  if(/^#build/.test(location.hash)){ history.replaceState(null, "", "#" + location.hash.slice(1).replace(/^build-?/, "")); }\n'
     '  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);')
