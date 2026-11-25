@@ -40,7 +40,7 @@ for f in sorted(glob.glob(os.path.join(renders, "*"))):
 V = fp.hexdigest()[:8]
 
 # 1. the 3D renderer, the flat fallback drawing, the builder and the database
-cut("const F3D = (() => {", "flowerOnly};\n})();\n", keep_end=False)
+cut("const F3D = (() => {", "\n})();\n", "\n", keep_end=False)   # to the first IIFE close at column 0
 cut("/* Even spacing over the dome", "/* umbels are shown as 3D stills.")
 # the segmented-control thumb (stretchThumb, slideSeg, moveSegThumb) sits in the builder's code but the home page uses it
 seg_i = h.find("/* a segmented control's thumb stretches"); seg_j = h.find("function renderBuilder(p){", seg_i)
@@ -81,6 +81,7 @@ assert "#nu-shadow" not in h
 # 3b. no design system page: its styles, header button, code and route go; #design opens the home page
 cut("/* ===== design system page (#design) ===== */", "</style>")
 drop_line('id="design-link"')
+drop_line('body[data-page="build"] :is(#design-link, #lang, #builder-link)')   # the builder's header rule
 cut("/* ---------- design system (#design)", "function route(instant){")
 sub('    if(id === "design"){ B.plant = null; view.innerHTML = renderDesign(); bindDesign(); document.title = "Design system · Hoya Collection"; }\n    else if(id === "build"',
     '    if(id === "build"')
