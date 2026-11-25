@@ -1,6 +1,10 @@
 """Turn the Hoya Collection artifact's index.html into the lighter published page.
 
-  python3 build.py <artifact index.html> <saved designs .json> <out index.html> <renders dir>
+  python3 build.py <artifact index.html> <saved designs .json> <out index.html> <renders dir> [--keep-builder]
+
+With --keep-builder the flower builder (#build, #build-<plant>) stays, with its 3D renderer and reference photos
+(copy the artifact's photos/ to the repo root). With no database on the live site it can't save; the artifact
+already says so in the builder ("Saving isn't available in this view").
 
 The artifact already shows pictures rather than live 3D. For the published site this:
 - reads every picture from renders/ (drawn by bake_renders.py from the saved designs), never from the artifact's
@@ -15,6 +19,7 @@ Every cut checks its markers, so a changed artifact fails loudly instead of buil
 import re, glob, hashlib, json, os, sys
 
 src, designs, dst, renders = sys.argv[1:5]
+KEEP_BUILDER = "--keep-builder" in sys.argv[5:]
 h = open(src, encoding="utf-8").read()
 
 def cut(start, end, repl="", keep_end=True):
@@ -40,22 +45,23 @@ for f in sorted(glob.glob(os.path.join(renders, "*"))):
 V = fp.hexdigest()[:8]
 
 # 1. the 3D renderer, the flat fallback drawing, the builder and the database
-cut("const F3D = (() => {", "\n})();\n", "\n", keep_end=False)   # to the first IIFE close at column 0
-cut("/* Even spacing over the dome", "/* umbels are shown as 3D stills.")
-# the segmented-control thumb (stretchThumb, slideSeg, moveSegThumb) sits in the builder's code but the home page uses it
-seg_i = h.find("/* a segmented control's thumb stretches"); seg_j = h.find("function renderBuilder(p){", seg_i)
-assert 0 <= seg_i < seg_j, "segmented-control code not found"
-seg_code = h[seg_i:seg_j]
-cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */", seg_code)
-drop_line("const PHOTOS = ")
-# placeholders that the renderer used to fill in are never made now
-cut("let hydrateRun = 0;\nfunction hydrateUmbels(){", "  requestAnimationFrame(step);\n}\n", "function hydrateUmbels(){}\n", keep_end=False)
-# a picture that can't load is simply left out (the flat drawing that stood in needed the renderer)
-sub('  if(p && el.classList.contains("art") && el.dataset.kind !== "flower" && el.dataset.kind !== "leaf") el.outerHTML = drawSpec(specOf(p), p.name, el.getAttribute("alt") || "", false);\n  else el.remove();',
-    '  el.remove();')
+if not KEEP_BUILDER:
+    cut("const F3D = (() => {", "\n})();\n", "\n", keep_end=False)   # to the first IIFE close at column 0
+    cut("/* Even spacing over the dome", "/* umbels are shown as 3D stills.")
+    # the segmented-control thumb (stretchThumb, slideSeg, moveSegThumb) sits in the builder's code but the home page uses it
+    seg_i = h.find("/* a segmented control's thumb stretches"); seg_j = h.find("function renderBuilder(p){", seg_i)
+    assert 0 <= seg_i < seg_j, "segmented-control code not found"
+    seg_code = h[seg_i:seg_j]
+    cut("/* ---------- flower builder (#build, #build-<plant>) ---------- */", "/* routing */", seg_code)
+    drop_line("const PHOTOS = ")
+    # placeholders that the renderer used to fill in are never made now
+    cut("let hydrateRun = 0;\nfunction hydrateUmbels(){", "  requestAnimationFrame(step);\n}\n", "function hydrateUmbels(){}\n", keep_end=False)
+    # a picture that can't load is simply left out (the flat drawing that stood in needed the renderer)
+    sub('  if(p && el.classList.contains("art") && el.dataset.kind !== "flower" && el.dataset.kind !== "leaf") el.outerHTML = drawSpec(specOf(p), p.name, el.getAttribute("alt") || "", false);\n  else el.remove();',
+        '  el.remove();')
 
 # 2. every picture from renders/, versioned by the pictures themselves
-sub('  if(o && o.images){ const id = o.images[kind] || (kind === "thumb" && o.images.front); if(id) return "/_blob/" + id; }\n', "")
+drop_line('if(id) return "/_blob/" + id; }')   # picSrc's branch for pictures in the artifact's storage
 # the artifact's own version numbers change from time to time, so match any
 def resub(pat, new):
     global h
@@ -69,19 +75,23 @@ sub('if(view === "three") return picImg(p, "three", "nu-sh nu-mul", "", true) + 
     'if(view === "three"){ const sh = k => `<i class="nu-sh ${k}" aria-hidden="true"><b style="--m:url(renders/${slug(p.name)}-shade.png?v=' + V + ')"></b></i>`;\n'
     '    return sh("nu-mul") + sh("nu-ovl") + picImg(p, "three", "art art3d", label); }')
 sub("filter:url(#nu-shadow); -webkit-filter:url(#nu-shadow); ", "")
+if KEEP_BUILDER:   # the builder's live hero still draws its shadows as canvases, with the filter; nothing else uses it
+    sub(".nu-mul{mix-blend-mode:multiply}", "canvas.nu-sh{filter:url(#nu-shadow); -webkit-filter:url(#nu-shadow)}\n.nu-mul{mix-blend-mode:multiply}")
 sub(".nu-mul{mix-blend-mode:multiply}",
     ".nu-sh{opacity:0; transition:opacity .25s var(--ease)}\n"
     ".name-umbel:has(img.art.on) .nu-sh{opacity:1}\n"
     f".nu-sh b{{position:absolute; inset:-25%; opacity:.1; background:url(renders/grain.png?v={V}) 0 0/128px 128px;"
     " -webkit-mask:var(--m) center/100% 100% no-repeat; mask:var(--m) center/100% 100% no-repeat}\n"
     ".nu-mul{mix-blend-mode:multiply}")
-cut("<!-- the umbel shadow behind the hoya name", "</filter></svg>\n", keep_end=False)
-assert "#nu-shadow" not in h
+if not KEEP_BUILDER:
+    cut("<!-- the umbel shadow behind the hoya name", "</filter></svg>\n", keep_end=False)
+    assert "#nu-shadow" not in h
 
 # 3b. no design system page: its styles, header button, code and route go; #design opens the home page
 cut("/* ===== design system page (#design) ===== */", "</style>")
 drop_line('id="design-link"')
-drop_line('body[data-page="build"] :is(#design-link, #lang, #builder-link)')   # the builder's header rule
+if KEEP_BUILDER: sub('body[data-page="build"] :is(#design-link, #lang, #builder-link)', 'body[data-page="build"] :is(#lang, #builder-link)')
+else: drop_line('body[data-page="build"] :is(#design-link, #lang, #builder-link)')   # the builder's header rule
 cut("/* ---------- design system (#design)", "function route(instant){")
 sub('    if(id === "design"){ B.plant = null; view.innerHTML = renderDesign(); bindDesign(); document.title = "Design system · Hoya Collection"; }\n    else if(id === "build"',
     '    if(id === "build"')
@@ -90,14 +100,15 @@ for gone in ("renderDesign", "bindDesign", "dsValues", 'href="#design"', "design
     assert gone not in h, f"design system still referenced: {gone}"
 
 # 4. routing: no builder page; old builder links open the plant (or the home page)
-sub('    if(id === "build" || id.startsWith("build-")){ const bp = builderPlant(id); view.innerHTML = renderBuilder(bp); bindBuilder(bp); document.title = "Flower builder · " + bp.name; }\n    else if(p){ B.plant = null; ',
-    '    if(p){ ')
-sub('    else { B.plant = null; ', '    else { ')
-sub('  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);',
-    '  if(/^#build/.test(location.hash)){ history.replaceState(null, "", "#" + location.hash.slice(1).replace(/^build-?/, "")); }\n'
-    '  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);')
-drop_line('document.getElementById("builder-link")')
-drop_line('id="builder-link"')
+if not KEEP_BUILDER:
+    sub('    if(id === "build" || id.startsWith("build-")){ const bp = builderPlant(id); view.innerHTML = renderBuilder(bp); bindBuilder(bp); document.title = "Flower builder · " + bp.name; }\n    else if(p){ B.plant = null; ',
+        '    if(p){ ')
+    sub('    else { B.plant = null; ', '    else { ')
+    sub('  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);',
+        '  if(/^#build/.test(location.hash)){ history.replaceState(null, "", "#" + location.hash.slice(1).replace(/^build-?/, "")); }\n'
+        '  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);')
+    drop_line('document.getElementById("builder-link")')
+    drop_line('id="builder-link"')
 
 # 5. saved designs written into the page (without the artifact's picture ids), and each plant worked out once
 ov = {d["plant"]: {k: v for k, v in d.items() if k != "images"} for d in json.load(open(designs, encoding="utf-8"))}
@@ -106,7 +117,7 @@ sub("function specOf(p){ const sp = savedSpec(p); if(!sp.accentManual) sp.accent
     "const SPEC_MEMO = new Map();\n"
     "function specOf(p){ let sp = SPEC_MEMO.get(p.name); if(!sp){ sp = savedSpec(p); if(!sp.accentManual) sp.accent = autoAccent(sp, COLORS[p.name]); SPEC_MEMO.set(p.name, sp); } return Object.assign({}, sp); }")
 
-for gone in ("F3D.stillOf", "renderBuilder", "bindBuilder", "drawSpec(", "B.plant", "builder-link", "return \"/_blob/\""):
+for gone in (("return \"/_blob/\"",) if KEEP_BUILDER else ("F3D.stillOf", "renderBuilder", "bindBuilder", "drawSpec(", "B.plant", "builder-link", "return \"/_blob/\"")):
     assert gone not in h.replace("F3D.stillOf(sp, name", ""), f"still referenced: {gone}"
 open(dst, "w", encoding="utf-8").write(h)
 

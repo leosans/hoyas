@@ -17,7 +17,7 @@
       control sizes (--h-*), easing (--ease*), durations by role (--dur-*), elevation (--ring, --shadow-*), glass (--glass-*).
    2. Components (search for the class):
       .btn              button, glass: --glass-bg over --glass-blur, faint ring, --h-control-sm tall with a 44px tap area;
-                        hover grows it 5% (mouse only), press 0.98, disabled, focus ring. .primary and a pressed toggle fill
+                        hover darkens its ring (mouse only), press 0.985, disabled, focus ring. .primary and a pressed toggle fill
                         with ink. A leading .sf icon gets padding equal to the space above and below it. .compact /
                         .compact-text turn it into a circle on phones
       .oc-btn           glass plus button on the origin and scent cards; turns into a close mark when open
@@ -61,11 +61,12 @@
   /* control sizes */
   --h-control:44px; --h-control-sm:38px; --h-control-inner:36px; --h-toast:40px;
   /* durations, by role */
-  --dur-press:.1s; --dur-tick:.15s; --dur-exit:.16s; --dur-quick:.2s; --dur-knob:.22s; --dur-enter:.24s; --dur-hover:.25s;
+  --dur-press:.08s; --dur-tick:.15s; --dur-exit:.16s; --dur-quick:.2s; --dur-knob:.22s; --dur-enter:.24s; --dur-hover:.18s;
   --dur-move:.3s; --dur-settle:.35s; --dur-fade:.4s; --dur-panel:.42s; --dur-color:.45s; --dur-flip:.5s;
   /* elevation and edges */
   --ring:inset 0 0 0 1px rgba(0,0,0,.08);
   --ring-ctl:rgb(0 0 0 / .05);   /* the faint outline of buttons, segmented controls, dropdowns and the search field (white at 7% in dark mode) */
+  --ring-ctl-hover:rgb(0 0 0 / .16);   /* that outline under the mouse: hover darkens the ring instead of growing the control (white at 20% in dark mode) */
   --shadow-thumb:0 1px 3px rgba(0,0,0,.12);
   --shadow-lift:0 20px 50px rgba(0,0,0,.12), 0 3px 10px rgba(0,0,0,.05);
   --shadow-toast:0 10px 30px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08);
@@ -77,13 +78,13 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#000000; --tile:#121212; --ink:#FFFFFF; --muted:#8F8F8F; --line:#2B2B2B; --signal:#FF6630; --sunk:#1C1C1C; --husk:#5E5852;
-    --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07);
+    --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07); --ring-ctl-hover:rgb(255 255 255 / .2);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#000000; --tile:#121212; --ink:#FFFFFF; --muted:#8F8F8F; --line:#2B2B2B; --signal:#FF6630; --sunk:#1C1C1C; --husk:#5E5852;
-  --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07);
+  --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07); --ring-ctl-hover:rgb(255 255 255 / .2);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -104,23 +105,26 @@ body[data-page="home"] .brand{opacity:0; pointer-events:none}
 body[data-page="build"] :is(#design-link, #lang, #builder-link){display:none}   /* the builder has its own navigation; the theme button stays */   /* the home page already has the title in its big box; the link keeps its place so the buttons stay put */
 .dot{width:8px; height:8px; border-radius:50%; background:var(--signal); transition:background-color var(--dur-color) var(--ease)}
 .bar-actions{display:flex; gap:var(--space-sm); align-items:center}
+.tl{display:inline-grid} .tl > span{grid-area:1/1; text-align:center}
+.tl[data-next="dark"] .tl-light, .tl[data-next="light"] .tl-dark{visibility:hidden}
 /* the button: glass. A see-through fill over a 16px background blur with a faint ring, 38px tall with a 44px tap area;
-   hover grows it 5% (mouse only), press shrinks it to 0.98. .primary fills it with ink; a pressed toggle does too */
+   hover darkens its ring (mouse only), press shrinks it to 0.985. .primary fills it with ink; a pressed toggle does too */
 .btn{--btn-h:var(--h-control-sm);
   font:500 var(--fs-md)/1 var(--body); font-feature-settings:var(--inter); color:color-mix(in oklch, var(--hue, var(--ink)) var(--tm), var(--tb));
-  background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px var(--ring-ctl);
+  background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl));
   border-radius:var(--r-pill); height:var(--btn-h); box-sizing:border-box; padding:0 14px; white-space:nowrap; cursor:pointer; position:relative;
   text-decoration:none; display:inline-flex; align-items:center; gap:var(--space-sm);
   transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease), box-shadow var(--dur-color) var(--ease), opacity var(--dur-move) var(--ease)}
 .btn::after{content:""; position:absolute; inset:-3px 0}   /* a 44px tall tap area */
-:root[data-theme="dark"] :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-ctl)}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-ctl)} }
+:root[data-theme="dark"] :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl))}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl))} }
 :root[data-theme="dark"] .b-pane{border-color:rgb(255 255 255 / .1)}   /* the previews' outline: black at 10% in light mode, white at 10% in dark */
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .b-pane{border-color:rgb(255 255 255 / .1)} }
 /* segmented controls, dropdowns and the search field share the button's faint ring */
-.seg, .b-name, .search{box-shadow:0 0 0 1px var(--ring-ctl)}
-@media (hover:hover) and (pointer:fine){ .btn:hover:not(:disabled){transform:scale(1.05)} }
-.btn:active:not(:disabled){transform:scale(.98); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press), var(--dur-color), var(--dur-move)}
+.seg, .b-name, .search{box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl))}
+/* hover (mouse only): the control stays its size and its outline darkens; press still shrinks it */
+@media (hover:hover) and (pointer:fine){ :is(.btn:not(:disabled), .b-name, select, .search, .oc-btn, .gmid):hover{--ring-now:var(--ring-ctl-hover)} }
+.btn:active:not(:disabled){transform:scale(.985); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press), var(--dur-color), var(--dur-move)}
 .btn:focus-visible,.tile-link:focus-visible,input:focus-visible,.seg button:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
 .btn .sf{font-size:var(--fs-base)}
 /* an icon button (only an icon inside) is a circle: as wide as it is tall, the icon centered */
@@ -178,7 +182,7 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .controls .seg{flex:none}
 .search{
   flex:1 1 150px; min-width:0; display:flex; align-items:center; gap:var(--space-md); background:var(--sunk); border-radius:var(--r-pill); padding:0 16px; height:var(--h-control); box-sizing:border-box;
-  transition:background-color var(--dur-color) var(--ease);
+  transition:background-color var(--dur-color) var(--ease), box-shadow var(--dur-color) var(--ease);
 }
 .search .sf{font-size:var(--fs-lg); color:var(--muted); flex:none}
 /* the browser's own clear mark is hidden (it drew in the system's blue, or barely at all); ours matches the field */
@@ -187,7 +191,7 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
   opacity:0; transform:scale(.6); pointer-events:none; transition:opacity var(--dur-quick) var(--ease-in), transform var(--dur-quick) var(--ease-in), color var(--dur-color) var(--ease)}
 .search-clear::after{content:""; position:absolute; inset:-8px}   /* a 44px tap area */
 .search.has-q .search-clear{opacity:1; transform:none; pointer-events:auto; transition:opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out), color var(--dur-color) var(--ease)}
-.search-clear:active{transform:scale(.9)}
+.search-clear:active{transform:scale(.94)}
 .search-clear:focus-visible{outline:2px solid var(--signal); outline-offset:1px}
 .search input{flex:1; border:0; background:transparent; color:var(--ink); font:inherit; font-size:var(--fs-input); padding:0; height:100%; outline:none; min-width:0; transition:color var(--dur-color) var(--ease)}
 .seg{display:flex; align-items:center; height:var(--h-control); box-sizing:border-box; background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);   /* the buttons' glass fill */ border-radius:var(--r-pill); padding:4px; gap:var(--space-3xs); transition:background-color var(--dur-color) var(--ease)}
@@ -200,9 +204,9 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 
 /* index grid */
 .grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--gap); margin-top:var(--gap)}
-/* hovering grows a tile very slightly rather than moving it, so it never slides out from under the cursor and flickers */
+/* hovering fills a tile with its color; it never moves or grows, so it never slides out from under the cursor */
 .tile-link{text-decoration:none; display:flex; flex-direction:column; gap:var(--space-xl); min-height:220px; cursor:pointer; will-change:transform; -webkit-backface-visibility:hidden; backface-visibility:hidden}
-@media (hover:hover) and (pointer:fine){ .tile-link:hover{transform:scale(1.015); background:var(--c, var(--ink)); color:var(--on, var(--tile))} }
+@media (hover:hover) and (pointer:fine){ .tile-link:hover{background:var(--c, var(--ink)); color:var(--on, var(--tile))} }
 /* on hover every part of the card goes straight to the card's hover text color (not "inherit", which would chase the
    card's own color as it eases and arrive late), over the same time and curve as the background */
 @media (hover:hover) and (pointer:fine){ .tile-link:hover .origin-mini,.tile-link:hover .pill,.tile-link:hover .label{color:var(--on, var(--tile))} }
@@ -403,8 +407,8 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .oc-back.scent-back{-webkit-clip-path:inset(0 round var(--r)); clip-path:inset(0 round var(--r))}
 .stats .origin-tile .oc-back.scent-back .sr-back{opacity:1; transform:none; transition:none}
 .oc-btn{position:absolute; top:12px; right:12px; width:30px; height:30px; border-radius:50%; border:0; background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); color:color-mix(in oklch, var(--hue) var(--tm), var(--tb)); cursor:pointer;
-  display:grid; place-items:center; transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease)}
-@media (hover:hover) and (pointer:fine){ .oc-btn:hover{transform:scale(1.08)} } .oc-btn:active{transform:scale(.97); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press)}
+  display:grid; place-items:center; box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl)); transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease), box-shadow var(--dur-color) var(--ease)}
+.oc-btn:active{transform:scale(.98); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press)}
 .oc-btn i, .oc-btn i::before{display:block; width:12px; height:2px; border-radius:1px; background:currentColor}
 .oc-btn i{position:relative; transition:transform var(--dur-color) var(--oc-ease, var(--ease))}
 .oc-btn i::before{content:""; position:absolute; inset:0; transform:rotate(90deg)}
@@ -546,10 +550,9 @@ img.bloom-canvas{object-fit:contain}
 .b-open{flex:none; margin-left:var(--space-xs)}
 .b-pickwrap{position:relative; min-width:0; flex:0 1 auto}
 .b-name{display:flex; align-items:center; gap:var(--space-sm); max-width:100%; position:relative; height:var(--h-control-sm); padding:0 calc((var(--h-control-sm) - 13px) / 2) 0 14px; border:0; border-radius:var(--r-pill); background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); color:var(--ink); cursor:pointer;
-  transition:background-color var(--dur-color) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease)}
+  transition:background-color var(--dur-color) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease), box-shadow var(--dur-color) var(--ease)}   /* hover and press as the buttons' */
 .b-name::after{content:""; position:absolute; inset:-3px 0}   /* the default button's height (38px), with its 44px tap area */
-@media (hover:hover) and (pointer:fine){ .b-name:hover{transform:scale(1.05)} }   /* hover and press as the buttons' */
-.b-name:active{transform:scale(.98); transition-duration:var(--dur-press)}
+.b-name:active{transform:scale(.985); transition-duration:var(--dur-press)}
 .b-name:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
 .b-name .b-title{font:700 var(--fs-2xl)/1.4 var(--display); letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
 .b-name .b-caret{font-size:var(--fs-md); color:var(--muted); transition:color var(--dur-color) var(--ease)}
@@ -693,18 +696,16 @@ input[type=range]{width:100%; margin:8px 0 0; accent-color:var(--ink); height:22
 .gstop{position:absolute; top:3px; left:11px; translate:calc((100cqw - 22px) * var(--v, 0)) 0; width:22px; height:22px; margin-left:-11px; padding:0; border:0; border-radius:50%; cursor:grab; touch-action:none;
   box-shadow:0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.3); transition:translate var(--dur-knob) var(--ease-in-out), background-color var(--dur-move) var(--ease), box-shadow var(--dur-hover) var(--ease), transform var(--dur-quick) var(--ease)}
 .gstop[aria-pressed="true"]{box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ink), 0 1px 4px rgba(0,0,0,.3)}
-@media (hover:hover) and (pointer:fine){ .gstop:hover{transform:scale(1.08)} }
 .gstop:focus-visible{outline:none; box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ink), 0 0 0 7px rgba(0,0,0,.12)}
 .gstops.dragging, .gstops.dragging .gstop{transition:none}
 .gstops.dragging .gstop{cursor:grabbing}
 .gstops-out{display:flex; justify-content:space-between; margin:6px 0 0; font-size:var(--fs-sm); color:var(--muted)}
 /* the corolla's add/remove middle color: the design system's plus button (.oc-btn): a 30px glass circle with a 12 by 2px
-   plus, growing 8% on hover and shrinking to 0.97 on press; its bar folds away as it turns into a minus */
+   plus, with the buttons' faint ring that darkens on hover, shrinking to 0.98 on press; its bar folds away as it turns into a minus */
 .gmid{position:relative; flex:none; width:30px; height:30px; padding:0; border:0; border-radius:50%; background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
-  color:color-mix(in oklch, var(--hue, var(--ink)) var(--tm), var(--tb)); cursor:pointer;
-  transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease)}
-@media (hover:hover) and (pointer:fine){ .gmid:hover{transform:scale(1.08)} }
-.gmid:active{transform:scale(.97); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press)}
+  color:color-mix(in oklch, var(--hue, var(--ink)) var(--tm), var(--tb)); cursor:pointer; box-shadow:0 0 0 1px var(--ring-now, var(--ring-ctl));
+  transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease), box-shadow var(--dur-color) var(--ease)}
+.gmid:active{transform:scale(.98); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press)}
 .gmid::after{content:""; position:absolute; inset:-7px; border-radius:50%}   /* a 44px tap area */
 .gmid:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
 .gmid i{position:absolute; left:50%; top:50%; width:12px; height:2px; margin:-1px 0 0 -6px; border-radius:1px; background:currentColor}
@@ -718,15 +719,14 @@ input[type=range]{width:100%; margin:8px 0 0; accent-color:var(--ink); height:22
 /* the reset opens out under the page accent swatch (rows 0fr to 1fr, so the height eases) */
 .swatch-wrap{display:grid; grid-template-rows:auto 0fr; transition:grid-template-rows var(--dur-move) var(--ease)}
 .swatch-wrap.on{grid-template-rows:auto 1fr}
-.sw-reset-box{overflow:hidden; min-height:0; margin:0 -6px -6px; padding:0 6px 6px}   /* room inside the clipping for the buttons' ring and hover growth */
+.sw-reset-box{overflow:hidden; min-height:0; margin:0 -6px -6px; padding:0 6px 6px}   /* room inside the clipping for the buttons' ring and press */
 .sw-reset{width:100%; justify-content:center; margin-top:6px;
   opacity:0; transform:translateY(-6px); pointer-events:none; transition:opacity var(--dur-hover) var(--ease), transform var(--dur-move) var(--ease), background-color var(--dur-settle) var(--ease), color var(--dur-settle) var(--ease), border-color var(--dur-settle) var(--ease)}
 .swatch-wrap.on .sw-reset{opacity:1; transform:none; pointer-events:auto}
-@media (hover:hover) and (pointer:fine){ .swatch-wrap.on .sw-reset:hover{transform:scale(1.02)} }
-.swatch-wrap.on .sw-reset:active{transform:scale(.99); transition-duration:var(--dur-press)}   /* the shared button hover and press (its reveal sets transform too) */
+.swatch-wrap.on .sw-reset:active{transform:scale(.993); transition-duration:var(--dur-press)}   /* the shared button hover and press (its reveal sets transform too) */
 .swatch-ctl{display:flex; gap:var(--space-md); align-items:center; text-align:left; width:100%; background:var(--sunk); color:var(--ink); border:0; border-radius:14px; padding:7px; cursor:pointer; font:500 var(--fs-md) var(--body); font-feature-settings:var(--inter);
   box-shadow:inset 0 0 0 2px transparent; transition:background-color var(--dur-settle) var(--ease), color var(--dur-color) var(--ease), box-shadow var(--dur-move) var(--ease), transform var(--dur-hover) var(--ease)}
-.swatch-ctl:active{transform:scale(.98)}
+.swatch-ctl:active{transform:scale(.99)}
 .swatch-ctl[aria-pressed="true"]{background:var(--tile); box-shadow:inset 0 0 0 2px var(--ink)}
 .swatch-ctl i{width:34px; height:34px; border-radius:10px; flex:none; box-shadow:inset 0 0 0 1px rgba(0,0,0,.1); transition:background-color var(--dur-move) var(--ease)}
 .swatch-ctl small{display:block; font:var(--fs-xs) var(--mono); color:var(--muted); transition:color var(--dur-color) var(--ease)}
@@ -893,7 +893,7 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 .toast.act{pointer-events:auto}
 .toast button{position:relative; margin:0 -10px 0 14px; height:var(--h-toast); padding:0 10px; border:0; background:transparent; color:inherit; font:600 var(--fs-base)/1 var(--body); font-feature-settings:var(--inter); cursor:pointer; opacity:.85; transition:opacity var(--dur-quick) var(--ease), transform var(--dur-press) var(--ease)}
 @media (hover:hover) and (pointer:fine){ .toast button:hover{opacity:1} }
-.toast button:active{transform:scale(.97)}
+.toast button:active{transform:scale(.98)}
 .toast button:focus-visible{outline:2px solid var(--signal); outline-offset:-4px; border-radius:var(--r-pill)}
 .toast button::after{content:""; position:absolute; inset:-2px 0}   /* a 44px tall tap area */
 .toast span.out{opacity:0; filter:blur(4px); transform:translate(-50%, -6px)}
@@ -987,7 +987,7 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
     var saved = JSON.parse(localStorage.getItem("hoya-pic-srcs") || "{}")[id];
     var local = JSON.parse(localStorage.getItem("hoya-pics-local") || "[]");
     ["three", "front", "flower", "leaf"].forEach(function(k, i){
-      var src = (saved && saved[k]) || ("renders/" + id + "-" + k + ".webp?v=4");
+      var src = (saved && saved[k]) || ("renders/" + id + "-" + k + ".webp?v=8");
       if(local.indexOf(src) >= 0) return;
       var l = document.createElement("link"); l.rel = "preload"; l.as = "image"; l.href = src;
       l.setAttribute("fetchpriority", i === 0 ? "high" : "auto"); document.head.appendChild(l);
@@ -1029,7 +1029,7 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
       <a class="btn" href="#build" id="builder-link"><span class="sf" data-icon="builder" aria-hidden="true">􀥳</span><span>Flower builder</span></a>
       <button class="btn compact" id="theme" type="button" aria-label="Switch color theme">
         <span class="sf" data-icon="theme" aria-hidden="true">􀀂</span>
-        <span id="theme-label" data-tr="theme">Dark</span>
+        <span id="theme-label" class="tl" data-next="dark"><span class="tl-dark" data-tr="theme">Dark</span><span class="tl-light" data-tr="theme">Light</span></span>
       </button>
     </div>
   </header>
@@ -4411,6 +4411,14 @@ function petalGrad(sp){
   const sm = Math.min(s1 - .01, Math.max(s0 + .01, sp.petalStopM == null ? (s0 + s1)/2 : sp.petalStopM));
   return {cols:[sp.petalCentre, sp.petalMid, sp.petalTip], at:[s0, sm, s1]};
 }
+/* the corolla's gradient with its throat: the throat color laid over the middle, fading out before the sinuses */
+function petalGradFull(sp){
+  const G = petalGrad(sp), a = Math.max(0, Math.min(1, sp.throatAmt || 0));
+  if(a <= .001 || !sp.throat) return G;
+  const cols = [], at = [];
+  for(let i=0;i<=24;i++){ const t = i/24, q = stopT(t, .06, .34), w = a*(1 - q*q*(3 - 2*q)); cols.push(w > .001 ? OK.mix(gradAt(G, t), sp.throat, w) : gradAt(G, t)); at.push(t); }
+  return {cols, at};
+}
 /* the color at position t along a gradient of several stops */
 function gradAt(G, t){
   const {cols, at} = G; if(t <= at[0]) return cols[0];
@@ -4616,7 +4624,7 @@ const DEFAULTS = {
   /* splash */
   splash: 0, splashSize: .35, splashVar: .5, splashCluster: .4, splashBlotch: .2, splashAvoid: .6, splashEdge: .3, splashColor: "#DCE5E3", splashOpacity: .8,
   /* mottle */
-  mottle: 0, mottleScale: .4, mottleSoft: .4, mottleLight: "#9DB57E", mottleDark: "#3B3448",
+  mottle: 0, mottleScale: .4, mottleSoft: .4, mottleLight: "#9DB57E", mottleDark: "#3B3448", mottleCover: .5, mottleDarkShare: .5,
   /* variegation */
   varMode: "none", varExtent: .3, varMargin: 0, varCenter: 0, varColorC: "", varIrregular: .5, varVeins: .4, varColor: "#F1E9C2", varBand: "#C8D46A",
   /* margin */
@@ -4909,28 +4917,52 @@ function render(Pin, opt = {}){
   const hx = Lx, hy = Ly, hz = Lz + 1, hn = Math.hypot(hx, hy, hz), Hx = hx / hn, Hy = hy / hn, Hz = hz / hn;
   const spPow = 8 + 90 * P.gloss * (1 - P.rough * .8), seed = P.seed;
   const scs = .01 + .045 * P.splashSize;
+  /* splash reads as paint flicked onto the blade, not as cloud: each fleck is a solid, crisp-edged splat with a few lobes and
+     sharp spikes thrown outwards, and around the bigger ones a spray of small droplets, stretched away from the center.
+     Edges are anti-aliased to one pixel, so they stay crisp at any size */
   function splashAt(x, u, e, i){
     if(P.splash <= 0) return 0;
     let best = 0;
     for(const [cs, dens, big] of [[scs, P.splash, 0], [scs * 2.6, P.splash * P.splashBlotch, 1]]){
       if(dens <= 0) continue;
-      const gx = x / cs, gy = u / cs, ix = Math.floor(gx), iy = Math.floor(gy);
-      for(let a = -1; a <= 1; a++) for(let b = -1; b <= 1; b++){
+      const gx = x / cs, gy = u / cs, ix = Math.floor(gx), iy = Math.floor(gy), pxg = 1 / (L * cs);
+      for(let a = -2; a <= 2; a++) for(let b = -2; b <= 2; b++){
         const X = ix + a, Y = iy + b, s0 = seed + 101 + big * 50;
         const cxp = X + hash(X, Y, s0), cyp = Y + hash(X, Y, s0 + 1);
         /* how likely a fleck is here: clustering noise, more towards the margin, fewer on veins */
         const cl = lerp(1, sstep(.35, .7, fbm(cxp * cs * 5, cyp * cs * 5, seed + 77, 3)) * 1.6, P.splashCluster);
         const eb = lerp(1, Math.pow(1 - e, .6) * 1.5 + .1, P.splashEdge);
         if(hash(X, Y, s0 + 2) > dens * cl * eb) continue;
-        const rv = hash(X, Y, s0 + 3), rad = (.16 + .2 * hash(X, Y, s0 + 4)) * (1 + P.splashVar * 2.4 * Math.pow(rv, 4)) * (big ? 1.15 : 1);
-        const th = hash(X, Y, s0 + 5) * Math.PI, asp = 1 + 1.2 * hash(X, Y, s0 + 6), c = Math.cos(th), s = Math.sin(th);
-        const dx = gx - cxp, dy = gy - cyp, rx = (dx * c + dy * s) / asp, ry = -dx * s + dy * c;
-        let d = Math.sqrt(rx * rx + ry * ry) / rad;
-        d += (vnoise(gx * 5, gy * 5, s0 + 9) - .5) * .38 + (vnoise(gx * 13, gy * 13, s0 + 19) - .5) * .18;   /* ragged edges, at two scales */
-        best = Math.max(best, 1 - sstep(.62, 1, d));
+        const rv = hash(X, Y, s0 + 3), rad = (.13 + .17 * hash(X, Y, s0 + 4)) * (1 + P.splashVar * 2.4 * Math.pow(rv, 4)) * (big ? 1.15 : 1);
+        const dx = gx - cxp, dy = gy - cyp;
+        if(dx * dx + dy * dy > rad * rad * 6.5) continue;   /* beyond its furthest droplet */
+        const th = hash(X, Y, s0 + 5) * Math.PI, asp = 1 + .5 * hash(X, Y, s0 + 6), c = Math.cos(th), sn = Math.sin(th);
+        const rx = (dx * c + dy * sn) / asp, ry = -dx * sn + dy * c, r = Math.sqrt(rx * rx + ry * ry), ang = Math.atan2(ry, rx);
+        /* the splat's outline: a few broad lobes, a finer ripple, and sharp spikes where the paint was thrown out */
+        const n1 = 3 + Math.floor(hash(X, Y, s0 + 7) * 4), p1 = hash(X, Y, s0 + 8) * 6.283, p2 = hash(X, Y, s0 + 10) * 6.283;
+        let f = .13 * Math.sin(n1 * ang + p1) + .06 * Math.sin((2 * n1 + 1) * ang + p2);
+        const big2 = rad > .3 || big, ns = Math.floor(hash(X, Y, s0 + 11) * (big2 ? 6 : 3));
+        for(let k = 0; k < ns; k++){
+          const pk = hash(X, Y, s0 + 20 + k) * 6.283, ln = .25 + .5 * hash(X, Y, s0 + 30 + k);
+          const cd = Math.cos(ang - pk); if(cd > 0) f += ln * Math.pow(cd, 60);
+        }
+        f += (vnoise(gx * 22, gy * 22, s0 + 19) - .5) * .06;   /* a slightly uneven rim, at a fine scale only */
+        const R = rad * (1 + f), aa = pxg / R * .9;
+        let m = 1 - sstep(1 - aa, 1 + aa, r / R);
+        /* droplets: small round drops thrown out around the splat, each pulled long towards where it flew */
+        const nd = big2 ? 2 + Math.floor(hash(X, Y, s0 + 12) * 6) : (hash(X, Y, s0 + 13) < .35 ? 1 + Math.floor(hash(X, Y, s0 + 14) * 2) : 0);
+        for(let k = 0; k < nd && m < 1; k++){
+          const da = hash(X, Y, s0 + 40 + k) * 6.283, dd = rad * (1.3 + .95 * hash(X, Y, s0 + 50 + k)), sr = rad * (.06 + .14 * Math.pow(hash(X, Y, s0 + 60 + k), 1.5));
+          const ca = Math.cos(da), sa = Math.sin(da), qx = dx - ca * dd, qy = dy - sa * dd;
+          const along = (qx * ca + qy * sa) / 1.5, across = -qx * sa + qy * ca, dr = Math.sqrt(along * along + across * across) / sr, ab = pxg / sr * .9;
+          m = Math.max(m, 1 - sstep(1 - ab, 1 + ab, dr));
+        }
+        best = Math.max(best, m);
       }
     }
-    return best * (1 - P.splashAvoid * clamp(near[i] / nearMax * 1.8));
+    /* where a vein runs, the paint is cut cleanly rather than thinned, so a splat keeps its solid color up to the vein */
+    const nv = P.splashAvoid * clamp(near[i] / nearMax * 1.8);
+    return best * (1 - sstep(.42, .5, nv));
   }
   for(let py = 0; py < Hc; py++) for(let px = 0; px < Wc; px++){
     const i = py * Wc + px; let A = inside[i]; if(A <= 0 && !tex) continue;
@@ -4952,8 +4984,12 @@ function render(Pin, opt = {}){
           const wx = x * (3 + 9 * P.mottleScale), wy = u * (3 + 9 * P.mottleScale);
           const q = fbm(wx + 1.1 * fbm(wx, wy, seed + 21, 3), wy + 1.1 * fbm(wx + 5, wy, seed + 23, 3), seed + 25, 4);
           const sw = .03 + .12 * P.mottleSoft;
-          col = mix3(col, mL, P.mottle * sstep(.56 - sw, .56 + sw, q));
-          col = mix3(col, mD, P.mottle * .8 * (1 - sstep(.36 - sw, .36 + sw, q)));
+          /* how much of the blade the blotches cover, and how many of them are dark rather than light (at .5 and .5,
+             the even camouflage this always drew) */
+          const cov = P.mottleCover == null ? .5 : P.mottleCover, dk = P.mottleDarkShare == null ? .5 : P.mottleDarkShare;
+          const tL = .56 + .5 * (.25 - cov * (1 - dk)), tD = .36 - .5 * (.25 - cov * dk);
+          col = mix3(col, mL, P.mottle * sstep(tL - sw, tL + sw, q));
+          col = mix3(col, mD, P.mottle * .8 * (1 - sstep(tD - sw, tD + sw, q)));
         }
         /* variegation: one zone (varMode, with varExtent), or a margin and a center zone at once (varMargin, varCenter) */
         const zones = P.varMode !== "none" ? [[P.varMode, P.varExtent, vC]] : [];
@@ -5021,7 +5057,7 @@ return {DEFAULTS, render};
    moves it under the light. Returns the direction to the light, in view space (x right, y up, z towards the viewer) */
 const LIGHT_DEFAULT = {flower:[126, 50], leaf:[122, 50]};
 /* the angle the Nodes picture is drawn at on the hoya pages (and the builder's Nodes preview turns to): [yaw, pitch] in radians */
-function leafViewOf(sp){ return [(sp.leafViewTurn == null ? 43 : +sp.leafViewTurn)*Math.PI/180, (sp.leafViewTilt == null ? 11 : +sp.leafViewTilt)*Math.PI/180]; }
+function leafViewOf(sp){ return [(sp.leafViewTurn == null ? 43 : +sp.leafViewTurn)*Math.PI/180, (sp.leafViewTilt == null ? 11 : +sp.leafViewTilt)*Math.PI/180, (+sp.leafViewRoll || 0)*Math.PI/180]; }
 function lightOf(sp, leaf){
   const d = LIGHT_DEFAULT[leaf ? "leaf" : "flower"], az = +((leaf ? sp.leafLightAz : sp.lightAz) ?? d[0]), el = +((leaf ? sp.leafLightEl : sp.lightEl) ?? d[1]);
   const a = az*Math.PI/180, e = Math.max(1, Math.min(90, el))*Math.PI/180;
@@ -5033,8 +5069,15 @@ const SPEC_FIELDS = {
   petalInner:  {min:0,   max:.5,  step:.01, label:"Sinus roundness", hint:"Sinuses, the corners between corolla lobes: 0 is sharp, 0.5 is fully round"},
   petalBulge:  {min:-1,  max:1,   step:.01, label:"Lobe margins",       hint:"Edges of each corolla lobe: below 0 curve in, above 0 curve out"},
   tubeDepth:   {min:-1,  max:1,   step:.01, label:"Tube shape",       hint:"Middle of the corolla: below 0 domes back (convex), above 0 cups forward (concave)"},
-  lobeBend:    {min:-1,  max:1,   step:.01, label:"Lobe bend",        hint:"Each lobe hinges near its base: below 0 bends back (reflexed), above 0 forward (inflexed)"},
+  lobeBend:    {min:-2,  max:2,   step:.01, label:"Lobe bend",        hint:"Each lobe hinges near its base: below 0 bends back (reflexed), above 0 forward (inflexed). 1 turns it a quarter turn, 2 a half turn"},
   lobeCurl:    {min:-1,  max:1,   step:.01, label:"Lobe curl",        hint:"Bend that grows towards the tip: below 0 rolls under (revolute), above 0 rolls forward"},
+  petalFuse:   {min:0,   max:.9,  step:.01, label:"Fused part",       hint:"How far out from the center the corolla stays one piece before the lobes part, as a share of the way to the tips: 0 parts them at their own sinuses, higher joins them into a tube or bell with the lobes as its rim"},
+  petalAcumen: {min:0,   max:1,   step:.01, label:"Lobe acumen",      hint:"Draws the tip of each corolla lobe out into a fine point"},
+  corollaSwell:{min:0,   max:1,   step:.01, label:"Swelling",         hint:"A swollen, waxy ridge along the middle of each lobe"},
+  corollaTwist:{min:-1,  max:1,   step:.01, label:"Twist",            hint:"Turns the lobes like a pinwheel, more toward their tips and not at all in the middle: below 0 clockwise, above 0 counterclockwise"},
+  papillae:    {min:0,   max:1,   step:.01, label:"Papillae",         hint:"A soft, pale sheen where the corolla turns away from you, from tiny papillae on its surface"},
+  throatAmt:   {min:0,   max:1,   step:.01, label:"Throat",           hint:"How strongly the throat color shows in the middle of the corolla, under the corona"},
+  petalBackAmt:{min:0,   max:1,   step:.01, label:"Underside",        hint:"How much the back of the corolla takes the underside color: 0 shows the front's colors, 1 the underside color alone"},
   corollaThick:{min:0,   max:1,   step:.01, label:"Corolla thickness", hint:"How thick and waxy the corolla is: 0 is paper thin, 1 is very fleshy"},
   marginCurl:  {min:-1,  max:1,   step:.01, label:"Margin curl",      hint:"Edges of each lobe: below 0 roll back (revolute), above 0 roll forward (involute)"},
   marginBend:  {min:-1,  max:1,   step:.01, label:"Margin bend",      hint:"Each lobe folds on its midline: both halves turn about it, down to the sinuses. Below 0 back, above 0 forward"},
@@ -5146,6 +5189,8 @@ const SPEC_FIELDS = {
   leafMottle:{min:0, max:1, step:0.01, label:"Mottle", hint:"Large soft blotches of lighter and darker color"},
   leafMottleScale:{min:0, max:1, step:0.01, label:"Mottle scale", hint:"Small to large blotches"},
   leafMottleSoft:{min:0, max:1, step:0.01, label:"Mottle softness", hint:"Crisp to soft edges"},
+  leafMottleCover:{min:0, max:1, step:0.01, label:"Mottle coverage", hint:"How much of the blade the blotches cover: a few scattered spots to a full camouflage"},
+  leafMottleBalance:{min:0, max:1, step:0.01, label:"Dark blotches", hint:"How many of the blotches are dark rather than light: 0 all light, 1 all dark"},
   leafVarMarginAmt:{min:0, max:0.9, step:0.01, label:"Margin variegation", hint:"How far the pale zone reaches in from the margin"},
   leafVarCenterAmt:{min:0, max:0.9, step:0.01, label:"Center variegation", hint:"How far the pale zone reaches out from the midrib"},
   leafVarRagged:{min:0, max:1, step:0.01, label:"Ragged edge", hint:"How irregular the edge of the pale zone is"},
@@ -5157,6 +5202,13 @@ const SPEC_FIELDS = {
   leafStressPatch:{min:0, max:1, step:0.01, label:"Patchiness", hint:"How patchy the stress color is"},
   leafStressVeins:{min:-1, max:1, step:0.01, label:"Veins under stress", hint:"Below 0 the veins stay green or cream, above 0 they redden first"},
   leafSeed:{min:0, max:999, step:1, label:"Pattern seed", hint:"A different random layout of veins and markings, same settings"},
+  leafProfile:{min:0, max:1, step:1, label:"Outline from", names:["Sliders","Leaf lab"], hint:"Leaf lab draws the outline with the leaf lab's width curve, from Width, Widest point and the three sliders beside it; Sliders uses the base and apex sliders"},
+  leafBaseFull:{min:0, max:1, step:.01, label:"Base fullness", hint:"Leaf lab outline: 0 tapers the base to a wedge, 1 keeps it full and rounded"},
+  leafTipFull:{min:0, max:1, step:.01, label:"Tip fullness", hint:"Leaf lab outline: 0 tapers the tip to a long point, 1 keeps it full and rounded"},
+  leafDrip:{min:0, max:1, step:.01, label:"Drip point", hint:"Leaf lab outline: how much the last part of the blade narrows into an acuminate point"},
+  veinBend:{min:0, max:1, step:.01, label:"Midrib bend", hint:"A slight sideways curve along the midrib"},
+  leafSplashOpacity:{min:0, max:1, step:.01, label:"Splash opacity", hint:"How solid the silver flecks are"},
+  leafGrain:{min:0, max:1, step:.01, label:"Grain", hint:"Fine grain painted into the blade's color: 0 is smooth"},
   leafPerNode: {min:1,   max:2,   step:1,   label:"Leaves per node",  hint:"2 is an opposite pair, as in most Hoyas; 1 is a single leaf at each node, as in imbricata"},
   petioleLength:{min:0,  max:1.5, step:.01, label:"Petiole length",   hint:"Length of the leaf stalk, relative to the blade"},
   leafAttach:  {min:-70, max:85,  step:1,   label:"Angle on the stem", hint:"The angle the petioles leave the node at, in degrees: they grow up along the stem, the way the plant grows (90 is straight up, 0 straight out), then curve to meet the leaves"},
@@ -5166,16 +5218,18 @@ const SPEC_FIELDS = {
   leafNodes:   {min:1,   max:2,   step:1,   label:"Nodes",            hint:"1 shows a short length of stem with one node; 2 shows two nodes, the stem running from one to the next, each with its leaves"},
   leafInternode:{min:.3, max:2.5, step:.01, label:"Distance between nodes", hint:"How far apart the two nodes are, as a share of the leaf's length"},
   stemCurve:   {min:-2,  max:3,   step:.01, label:"Stem curve",       hint:"How much the stem bows: 1 is the natural bow, 0 straight, negative bows the other way"},
+  stemCurveDir:{min:-180, max:180, step:1,  label:"Stem curve direction", hint:"Which way the stem bows, turned around the stem in degrees: 0 is the natural way, 90 a quarter turn, 180 the opposite side"},
   leafNodeTurn:{min:-180, max:180, step:1,  label:"Node rotation",    hint:"How far the second node's leaves are turned around the stem against the first's, in degrees: 90 crosses the pairs, as on many Hoyas"},
-  leafViewTurn:{min:-180, max:180, step:1,  label:"Turn",             hint:"How far the Nodes picture on the hoya page is turned around the stem, in degrees"},
-  leafViewTilt:{min:-80, max:80,  step:1,   label:"Tilt",             hint:"How far the Nodes picture on the hoya page is tilted towards or away from you, in degrees"},
+  leafViewTurn:{min:-360, max:360, step:1,  label:"Turn",             hint:"How far the Nodes picture on the hoya page is turned around the stem, in degrees"},
+  leafViewRoll:{min:-180, max:180, step:1,  label:"Rotation",         hint:"How far the Nodes picture on the hoya page is turned around its own center, like turning a photo, in degrees: above 0 counterclockwise, below 0 clockwise"},
+  leafViewTilt:{min:-180, max:180, step:1,  label:"Tilt",             hint:"How far the Nodes picture on the hoya page is tilted towards or away from you, in degrees"},
   petioleThick:{min:.3,  max:3,   step:.01, label:"Petiole thickness", hint:"How thick the leaf stalk is; 1 is natural"},
   heroX:       {min:-1,  max:1,   step:.01, label:"Across",            hint:"Moves the big umbel behind the name left (below 0) or right (above 0)"},
   heroY:       {min:-1,  max:1,   step:.01, label:"Up and down",       hint:"Moves the big umbel behind the name down (below 0) or up (above 0)"},
   heroTurn:    {min:-180, max:180, step:1,  label:"Turn",              hint:"Turns the big umbel behind the name left and right, in degrees"},
   heroTilt:    {min:-90, max:90,  step:1,   label:"Tilt",              hint:"Tilts the big umbel behind the name towards you (below 0) or away (above 0), in degrees"}
 };
-const COLOR_FIELDS = [["petalCentre","Corolla, center"],["petalMid","Corolla, middle"],["petalTip","Corolla, lobe tips"],["fuzzColor","Fuzz"],["sheenColor","Corolla sheen"],["coronaCentre","Corona, center"],["coronaTip","Corona, lobe tips"],["coronaSheenColor","Corona sheen"],["coronaShadeColor","Corona shading"],["dot","Gynostegium, base"],["dotTip","Gynostegium, top"],["pedicel","Pedicels"],["accent","Page accent"],
+const COLOR_FIELDS = [["petalCentre","Corolla, center"],["petalMid","Corolla, middle"],["petalTip","Corolla, lobe tips"],["fuzzColor","Fuzz"],["sheenColor","Corolla sheen"],["throat","Corolla, throat"],["petalBack","Corolla, underside"],["coronaCentre","Corona, center"],["coronaTip","Corona, lobe tips"],["coronaSheenColor","Corona sheen"],["coronaShadeColor","Corona shading"],["dot","Gynostegium, base"],["dotTip","Gynostegium, top"],["pedicel","Pedicels"],["accent","Page accent"],
   ["leafTop","Leaf, top"],["leafUnder","Leaf, underside"],["leafVein","Light veins"],["leafSplash","Splash"],["leafMottleLight","Mottle, light"],["leafMottleDark","Mottle, dark"],["leafVarMargin","Margin variegation"],["leafVarCenter","Center variegation"],["leafMarginColor","Dark margin"],
   ["leafEdge","Sun stress"],["leafSheenColor","Leaf sheen"],["leafFuzzColor","Leaf fuzz"],["leafPetiole","Petiole and stem"]];
 const SHAPE_PRESETS = {
@@ -5208,15 +5262,118 @@ function accentClear(hex, sp){
 }   /* saved in the builder, keyed by plant name */
 
 /* a starting leaf for each plant, read from its leaf notes: shape words set the outline, texture words the surface */
+/* each plant's leaf traits, from the leaf lab (checked against floras, taxonomy papers and growers' notes): shape, venation,
+   tone, new growth, sun stress, pattern, surface, form and thickness. They set the leaf's design; the free-text notes
+   only fill in what they don't cover */
+const LEAF_TRAITS = {"Affinis":["elliptic","midrib","mid",null,null,"none","velvet","flat","medium"],"Alagensis":["ovate","obscure","mid",null,null,"none","waxy","flat","medium"],"Albiflora":["elliptic","pale","light",null,null,"none","velvet","flat","medium"],"Archboldiana":["elliptic","midrib","dark","red-brown",null,"none","glossy","flat","thick"],"Australis":["ovate","obscure","mid",null,"yellow","none","glossy","flat","thick"],"Balaensis":["broad","midrib","mid",null,null,"none","waxy","dimpled","medium"],"Bella":["lanceolate","obscure","light",null,null,"none","waxy","flat","medium"],"Blashernaezii":["lanceolate","pale","mid",null,"red","none","rough","flat","thick"],"Blashernaezii ssp. Siariae Red":["lanceolate","pale","dark",null,"red","none","waxy","flat","medium"],"Blashernaezii ssp. Siariae Yellow Pink":["lanceolate","pale","dark",null,null,"none","waxy","flat","medium"],"Blashernaezii ssp. Valmayoriana":["lanceolate","pale","mid",null,"red","none","waxy","flat","medium"],"Campanulata":["elliptic","obscure","dark",null,null,"spots","waxy","flat","thin"],"Camphorifolia":["ovate","pale","mid",null,"red","none","waxy","flat","medium"],"Carnosa":["ovate","obscure","dark","red",null,"flecks","glossy","flat","thick"],"Celata":["lanceolate","obscure","light",null,null,"none","waxy","flat","thick"],"Chlorantha":["lanceolate","midrib","dark",null,null,"none","waxy","flat","medium"],"Cinnamomifolia":["ovate","three","dark",null,null,"none","waxy","flat","medium"],"Cinnamomifolia Purpureofusca":["ovate","three","dark",null,null,"flecks","waxy","flat","medium"],"Coronaria Pink":["elliptic","obscure","light",null,null,"none","velvet","flat","thick"],"Coronaria White":["elliptic","obscure","light",null,null,"none","velvet","flat","thick"],"Curtisii":["orbicular","obscure","olive",null,null,"mottled","waxy","flat","thick"],"Cutis-porcelana":["ovate","pale","mid",null,null,"none","glossy","flat","medium"],"Cv Ruthie":["elliptic","obscure","mid",null,null,"none","glossy","flat","medium"],"Decipulae":["lanceolate","obscure","mid",null,null,"none","waxy","flat","thin"],"Elliptica":["elliptic","network","olive",null,null,"network","waxy","flat","medium"],"Enduaensis":["orbicular","obscure","olive",null,null,"none","waxy","wavy","thick"],"Engleriana":["linear","obscure","mid",null,null,"none","waxy","flat","medium"],"Erythrina":["oblong","pale","mid",null,"red","flecks","waxy","flat","medium"],"Erythrostemma Pink":["elliptic","midrib","dark",null,null,"flecks","waxy","flat","medium"],"Erythrostemma Pink Corona":["elliptic","midrib","dark",null,null,"flecks","waxy","flat","medium"],"Forbesii":["obovate","dark","dark",null,null,"flecks","waxy","flat","medium"],"Globulifera":["ovate","midrib","mid","brown",null,"none","waxy","wings","thin"],"Globulosa":["lanceolate","dark","mid",null,null,"none","velvet","wavy","thin"],"Griffithii":["oblong","obscure","dark",null,"red","spots","waxy","flat","medium"],"Guppyi":["elliptic","obscure","mid",null,null,"none","rough","flat","thick"],"Hypolasia":["lanceolate","obscure","dark",null,null,"none","velvet","dimpled","medium"],"Ilagiorum":["lanceolate","sunken","mid",null,null,"none","waxy","canoe","thick"],"Imbricata Maxima":["orbicular","obscure","mid",null,null,"mottled","waxy","domed","thick"],"Imperialis Red":["oblong","midrib","light",null,null,"none","waxy","wavy","thick"],"Ischnopus":["lanceolate","obscure","mid",null,"orange-red","none","waxy","wavy","thin"],"Kanyakumariana":["obovate","obscure","dark",null,null,"none","waxy","wavy","thick"],"Lamingtoniae":["ovate","midrib","mid","brown",null,"none","waxy","wings","thin"],"Lauterbachii":["broad","pale","mid",null,null,"none","velvet","flat","medium"],"Linearis":["linear","obscure","mid",null,null,"none","velvet","terete","thin"],"Lobbii Dark Red":["elliptic","obscure","dark",null,"purple","none","waxy","flat","medium"],"Macgilivrayii":["ovate","midrib","mid","copper",null,"none","glossy","flat","thick"],"Memoria":["elliptic","obscure","mid","red",null,"flecks","waxy","flat","thick"],"Mindorensis Pink":["elliptic","midrib","mid",null,"red","none","glossy","flat","medium"],"Mindorensis Purple":["elliptic","midrib","mid",null,"red","none","glossy","flat","medium"],"Mindorensis Yellow":["elliptic","midrib","mid",null,"red","none","glossy","flat","medium"],"Multiflora Javanica Thai":["elliptic","pale","dark",null,null,"flecks","waxy","flat","thin"],"Odorata":["elliptic","obscure","mid",null,null,"none","waxy","flat","medium"],"Pallilimba":["orbicular","obscure","light",null,null,"none","waxy","cupped","thick"],"Patricia":["elliptic","pale","mid",null,"red","none","glossy","flat","medium"],"Pauciflora":["linear","obscure","dark",null,"pale","none","waxy","flat","thin"],"Pimenteliana":["ovate","obscure","mid",null,null,"none","waxy","flat","medium"],"Platycaulis":["linear","obscure","light",null,null,"none","waxy","flat","thin"],"Polyneura":["rhomboid","parallel","mid","pale",null,"none","waxy","flat","thin"],"Pubicalyx Pink Dragon":["lanceolate","obscure","dark","pink",null,"flecks","glossy","flat","thick"],"Pubicalyx Red Button":["lanceolate","obscure","dark",null,null,"flecks","glossy","flat","thick"],"Retusa":["linear","obscure","mid",null,null,"none","waxy","flat","thin"],"Rotundiflora":["oblong","obscure","dark",null,null,"none","velvet","flat","thick"],"Rubida":["ovate","midrib","mid","orange",null,"none","glossy","wings","thin"],"Samoensis":["elliptic","pale","light",null,null,"none","glossy","recurved","medium"],"Sarawak":["ovate","pale","mid",null,null,"flecks","waxy","flat","medium"],"Serpens":["orbicular","obscure","dark",null,null,"spots","velvet","flat","medium"],"Shepherdii":["linear","obscure","dark",null,null,"none","waxy","canoe","thick"],"Sigillatis":["lanceolate","obscure","olive",null,"red","flecks","waxy","flat","thick"],"Soligamiana":["lanceolate","pale","dark",null,"rose","none","waxy","flat","medium"],"Stoneana":["lanceolate","obscure","mid",null,null,"none","velvet","flat","thick"],"Surigaoensis":["ovate","obscure","mid",null,"red","none","glossy","flat","thick"],"Thomsonii":["elliptic","obscure","graygreen",null,null,"spots","velvet","flat","medium"],"Verticillata":["ovate","pale","light",null,null,"flecks","waxy","flat","thick"],"Quinquenervia":["elliptic","five","mid","dark red","red","none","waxy","flat","thick"],"Burtoniae":["elliptic","obscure","olive",null,"bronze","margin","velvet","flat","medium"],"Davidcummingii":["elliptic","obscure","dark",null,null,"margin","waxy","flat","thick"],"Densifolia":["ovate","midrib","mid","lime",null,"none","waxy","flat","medium"],"Diversifolia":["obovate","obscure","mid",null,null,"none","waxy","flat","thick"],"Fitchii":["elliptic","network","mid",null,"red","network","waxy","flat","medium"],"Imperialis Pink":["oblong","midrib","mid",null,null,"none","waxy","wavy","thick"],"Meliflua ssp. Meliflua":["elliptic","obscure","dark",null,null,"none","glossy","flat","thick"],"Micrantha":["elliptic","obscure","olive",null,null,"none","rough","flat","medium"],"Myrmecopa":["elliptic","obscure","emerald",null,"red","none","waxy","flat","thick"],"Praetorii":["oblong","sunken","dark",null,null,"spots","waxy","flat","medium"]};
+const LEAF_SHAPES = {   /* the lab's outlines, as builder settings */
+  linear:    {leafAspect:.11, leafWidest:.42, leafShoulder:.3, leafBase:.5,  leafApex:.3,  leafTip:0,   leafCordate:0},
+  lanceolate:{leafAspect:.27, leafWidest:.38, leafShoulder:.3, leafBase:.45, leafApex:.1,  leafTip:.3,  leafCordate:0},
+  elliptic:  {leafAspect:.48, leafWidest:.5,  leafShoulder:.35,leafBase:.45, leafApex:.35, leafTip:.15, leafCordate:0},
+  ovate:     {leafAspect:.58, leafWidest:.36, leafShoulder:.35,leafBase:.7,  leafApex:.15, leafTip:.25, leafCordate:0},
+  obovate:   {leafAspect:.6,  leafWidest:.68, leafShoulder:.35,leafBase:.1,  leafApex:.85, leafTip:0,   leafCordate:0},
+  orbicular: {leafAspect:.88, leafWidest:.5,  leafShoulder:.4, leafBase:.7,  leafApex:.7,  leafTip:.05, leafCordate:0},
+  oblong:    {leafAspect:.38, leafWidest:.5,  leafShoulder:.5, leafBase:.9,  leafApex:.8,  leafTip:.08, leafCordate:0},
+  rhomboid:  {leafAspect:.6,  leafWidest:.5,  leafShoulder:0,  leafBase:.05, leafApex:.05, leafTip:.35, leafCordate:0},
+  broad:     {leafAspect:.84, leafWidest:.4,  leafShoulder:.4, leafBase:.75, leafApex:.3,  leafTip:.2,  leafCordate:.3}
+};
+/* the leaf lab's presets (Hoya leaf lab: veins and patterns), tuned there against the collection's notes and photos.
+   They are the leaf engine's own settings; leafFromLab turns them into the builder's */
+const LEAF_LAB = {
+  "Carnosa": {aspect:.52, widest:.42, drip:.25, secCount:7, cPrimary:.25, cSecondary:.06, cMinor:0, areoleStrength:.05, terDensity:.2, relief:.05, pillow:.05, base:"#2D5527", splash:.42, splashSize:.22, splashVar:.6, splashCluster:.45, splashBlotch:.15, gloss:.85, rough:.05, curvature:.6, seed:3},
+  "Pubicalyx Pink Dragon": {aspect:.3, widest:.42, drip:.35, tipFull:.7, secCount:9, cPrimary:.2, cSecondary:.04, cMinor:0, areoleStrength:0, terDensity:.15, relief:.05, pillow:0, base:"#203F1E", splash:.5, splashSize:.6, splashVar:.8, splashBlotch:.6, splashCluster:.6, splashColor:"#D9DFE0", gloss:.8, curvature:.6, seed:11},
+  "Pubicalyx Red Button": {aspect:.3, widest:.42, drip:.35, tipFull:.7, secCount:9, cPrimary:.2, cSecondary:.04, cMinor:0, areoleStrength:0, terDensity:.15, relief:.05, pillow:0, base:"#203F1E", splash:.5, splashSize:.6, splashVar:.8, splashBlotch:.6, splashCluster:.6, splashColor:"#D9DFE0", gloss:.8, curvature:.6, seed:11},
+  "Elliptica": {aspect:.62, widest:.5, baseFull:.75, tipFull:.8, drip:.05, secCount:9, angleTop:50, angleBase:70, secCurve:.7, loopDist:.74, festoon:2, cPrimary:.8, cSecondary:.85, cMinor:.75, veinTint:"#EEF0D4", terDensity:1.1, terMode:.75, terSinuous:.55, areoleSize:.45, areoleStrength:.8, fev:.5, minorWidth:.8, relief:.35, pillow:.25, base:"#556A2C", midGlow:.1, gloss:.5, seed:5},
+  "Fitchii": {aspect:.55, widest:.48, drip:.1, secCount:8, festoon:1, cPrimary:.8, cSecondary:.85, cMinor:.65, veinTint:"#F1F3DE", terDensity:1, terMode:.7, areoleSize:.4, areoleStrength:.7, minorWidth:.7, relief:.25, base:"#3F6E2E", stress:.45, stressColor:"#A8323A", stressEdge:.7, stressVeins:-.9, gloss:.55, seed:8},
+  "Polyneura": {aspect:.5, widest:.48, baseFull:.45, tipFull:.45, drip:.7, secCount:22, angleTop:52, angleBase:62, spacingGrowth:.15, secCurve:.12, secIrregular:.15, ending:"margin", interSec:.1, secWidth:.45, cPrimary:.5, cSecondary:.45, cMinor:.15, terDensity:.25, terMode:.15, areoleStrength:.15, relief:.25, pillow:.15, base:"#3F7A35", gloss:.3, curvature:.3, seed:2},
+  "Cinnamomifolia": {aspect:.56, widest:.38, drip:.35, framework:"acrodromous", basalPairs:1, acroReach:.9, secCount:4, cPrimary:.75, cSecondary:.6, cMinor:.35, veinTint:"#C9D99A", terDensity:.8, terMode:.15, terSinuous:.3, areoleStrength:.2, relief:.55, pillow:.3, base:"#223F22", gloss:.4, seed:4},
+  "Quinquenervia": {aspect:.5, widest:.46, drip:.2, framework:"acrodromous", basalPairs:2, acroReach:.92, secCount:3, cPrimary:.65, cSecondary:.5, cMinor:.2, veinTint:"#C4D89A", terDensity:.6, terMode:.6, relief:.4, pillow:.2, base:"#3C6A2E", stress:.35, stressColor:"#8C2430", stressEdge:.5, stressVeins:-.4, gloss:.4, seed:6},
+  "Praetorii": {aspect:.34, widest:.48, baseFull:.4, tipFull:.5, drip:.3, secCount:11, angleTop:48, angleBase:62, secCurve:.6, cPrimary:-.35, cSecondary:-.3, cMinor:-.1, terDensity:.7, terMode:.4, relief:-.85, pillow:.75, base:"#1F4021", splash:.05, splashSize:.4, gloss:.55, seed:9},
+  "Erythrina": {aspect:.36, widest:.5, baseFull:.75, tipFull:.6, secCount:12, angleTop:55, angleBase:72, secCurve:.55, cPrimary:.75, cSecondary:.75, cMinor:.2, veinTint:"#D6E3A6", terDensity:.55, relief:.45, base:"#3E7034", splash:.12, splashSize:.2, stress:.25, stressVeins:-.6, gloss:.35, seed:12},
+  "Forbesii": {aspect:.5, widest:.66, baseFull:.95, tipFull:.45, drip:0, secCount:8, cPrimary:-.6, cSecondary:-.65, cMinor:-.25, terDensity:.5, relief:.1, base:"#2E5A2C", splash:.18, splashSize:.25, gloss:.5, seed:14},
+  "Patricia": {aspect:.5, widest:.48, secCount:8, cPrimary:.85, cSecondary:.85, cMinor:.25, veinTint:"#E5E59A", terDensity:.45, relief:.15, base:"#3C7034", stress:.7, stressColor:"#A3282F", stressEdge:.4, stressPatch:.5, stressVeins:-1, gloss:.7, seed:15},
+  "Sigillatis": {aspect:.27, widest:.45, drip:.2, secCount:6, cPrimary:.1, cSecondary:0, cMinor:0, areoleStrength:0, terDensity:0, fev:0, relief:0, pillow:0, base:"#4C5A2B", splash:.85, splashSize:.18, splashVar:.4, splashBlotch:.35, splashCluster:.3, splashAvoid:.2, splashColor:"#CFD8D2", stress:.35, stressColor:"#7A2430", stressEdge:.8, gloss:.4, seed:16},
+  "Curtisii": {aspect:.85, widest:.5, baseFull:.85, tipFull:.6, drip:.15, secCount:4, cPrimary:.08, cSecondary:0, cMinor:0, areoleStrength:0, terDensity:0, fev:0, base:"#56633A", mottle:.5, mottleScale:.9, mottleSoft:.25, splash:.35, splashSize:.15, splashColor:"#B9C0B0", splashOpacity:.6, mottleLight:"#A9B293", mottleDark:"#3F4A2A", gloss:.35, curvature:.7, seed:17},
+  "Imbricata Maxima": {aspect:.95, widest:.5, baseFull:.9, tipFull:.85, drip:0, secCount:7, cPrimary:.2, cSecondary:.12, cMinor:0, areoleStrength:.05, terDensity:.2, base:"#3F6A35", mottle:.65, mottleScale:.3, mottleSoft:.6, mottleLight:"#8FB57A", mottleDark:"#3A2C4A", gloss:.6, curvature:.95, seed:18},
+  "Burtoniae": {aspect:.45, widest:.46, drip:.1, secCount:6, cPrimary:.1, cSecondary:0, cMinor:0, areoleStrength:0, terDensity:.1, base:"#5D6832", margin:.85, marginWidth:.32, marginColor:"#6A2A1E", stress:.2, stressColor:"#8A4A22", fuzz:.6, gloss:.1, rough:.6, seed:19},
+};
+function leafFromLab(p, L){
+  const pre = LEAF_LAB[p.name]; if(!pre) return false;
+  const P = Object.assign({}, LeafEngine.DEFAULTS, pre), cl = (v, a, b) => Math.max(a, Math.min(b, v));
+  Object.assign(L, {
+    leafProfile:1, leafAspect:P.aspect, leafWidest:P.widest, leafBaseFull:P.baseFull, leafTipFull:P.tipFull, leafDrip:P.drip, leafCordate:0, leafNotch:0,
+    leafSeed:P.seed, veinBasal:P.framework === "acrodromous" ? P.basalPairs : 0, veinReach:P.acroReach, veinWidth:P.midribWidth, veinBend:P.midBend,
+    veinCount:P.secCount, veinAngleTop:P.angleTop, veinAngle:P.angleBase, veinDepart:P.secDepart, veinArch:P.secCurve, veinArchSmooth:P.archSmooth,
+    veinSpacing:P.spacingGrowth, veinIrregular:P.secIrregular, veinAlternate:P.secAlternate, veinEnd:Math.max(0, ["loops", "margin", "fade"].indexOf(P.ending)),
+    veinLoop:P.loopDist, veinFestoon:P.festoon, veinInter:P.interSec, veinSecWidth:P.secWidth,
+    veinTer:P.terDensity, veinNet:P.terMode, veinSinuous:P.terSinuous, veinAreole:P.areoleSize, veinAreoleAmt:P.areoleStrength, veinFev:P.fev, veinMinorWidth:P.minorWidth,
+    veinMid:P.cPrimary, veinSec:P.cSecondary, veinMinor:P.cMinor, leafVein:P.veinTint, veinRelief:P.relief, veinPillow:P.pillow,
+    leafTop:P.base, leafUnder:mix(P.base, "#C9D8A0", .5).toUpperCase(), leafMidGlow:P.midGlow, leafEdgeDark:P.edgeDark, leafUneven:P.colorNoise,
+    leafSplashAmt:P.splash, leafSplashSize:P.splashSize, leafSplashVar:P.splashVar, leafSplashCluster:P.splashCluster, leafSplashBlotch:P.splashBlotch,
+    leafSplashAvoid:P.splashAvoid, leafSplashEdge:P.splashEdge, leafSplash:P.splashColor, leafSplashOpacity:P.splashOpacity,
+    leafMottle:P.mottle, leafMottleScale:P.mottleScale, leafMottleSoft:P.mottleSoft, leafMottleLight:P.mottleLight, leafMottleDark:P.mottleDark, leafMottleCover:.5, leafMottleBalance:.5,
+    leafVarMarginAmt:0, leafVarCenterAmt:0,
+    leafMarginAmt:P.margin, leafMarginWidth:P.marginWidth, leafMarginColor:P.marginColor,
+    leafEdgeAmt:P.stress, leafEdge:P.stressColor, leafEdgeWidth:P.stressEdge, leafStressPatch:P.stressPatch, leafStressVeins:P.stressVeins,
+    leafGrain:P.rough, leafRoughness:cl(1 - P.gloss, .05, 1), leafFuzz:P.fuzz});
+  return true;
+}
+const LEAF_TONES = {light:"#86B24E", mid:"#4E8A3A", dark:"#244F2A", olive:"#68733A", graygreen:"#7D9276", emerald:"#1E7A52"};
+const LEAF_STRESS = {"red":"#B9353B", "yellow":"#C7C04C", "orange-red":"#D2562F", "purple":"#6C3560", "pale":"#B4CF93", "rose":"#C8687B", "bronze":"#9B6B34"};
+/* the traits as builder settings, laid over what the notes gave (L); returns the words the vein and marking settings
+   (labFromReading) look for, so those follow the traits too */
+function leafFromTraits(p, L){
+  const tr = LEAF_TRAITS[p.name]; if(!tr) return null;
+  const [shape, vein, tone, , stress, pattern, surface, form, thick] = tr, words = [];
+  Object.assign(L, LEAF_SHAPES[shape] || LEAF_SHAPES.elliptic);
+  /* veins: how they show, and their framework */
+  Object.assign(L, {veinStyle:0, veinCount:6, veinAngle:50, veinShow:.15, veinRelief:-.2, leafVein:"#C6DA7E", leafFold:.1});
+  if(vein === "obscure") Object.assign(L, {veinShow:.08, veinRelief:-.1});
+  if(vein === "midrib") Object.assign(L, {veinShow:.45, veinCount:3});
+  if(vein === "pale") { Object.assign(L, {veinShow:.8, leafVein:"#DCEA9C"}); words.push("pale veins"); }
+  if(vein === "dark") Object.assign(L, {veinShow:.75, leafVein:"#24420F"});
+  if(vein === "network") { Object.assign(L, {veinShow:.8, leafVein:"#EEF3E6"}); words.push("vein network", "white vein"); }
+  if(vein === "three" || vein === "five") { Object.assign(L, {veinStyle:.9, veinCount:4, veinShow:.7}); if(vein === "five") words.push("five"); }
+  if(vein === "parallel") Object.assign(L, {veinCount:12, veinAngle:62, veinShow:.6});
+  if(vein === "sunken") Object.assign(L, {veinShow:.6, veinRelief:-.6, leafFold:.3});
+  /* color */
+  const top = LEAF_TONES[tone] || LEAF_TONES.mid; L.leafTop = top; L.leafUnder = mix(top, "#C9D8A0", .5).toUpperCase();
+  /* sun stress: the lab draws the leaf as grown in normal light, so its color is ready but the reddening starts at 0 */
+  L.leafEdgeAmt = 0; if(stress) L.leafEdge = LEAF_STRESS[stress] || LEAF_STRESS.red;
+  if(pattern === "mottled") words.push("mottled");
+  if(pattern === "margin") words.push("darker edges");
+  if(pattern === "network" && !words.includes("vein network")) words.push("vein network", "white vein");
+  L._pattern = pattern;
+  /* surface */
+  Object.assign(L, {leafFuzz:0, leafRoughness:surface === "glossy" ? .15 : surface === "waxy" ? .35 : .85});
+  if(surface === "velvet") L.leafFuzz = .6;
+  /* form */
+  Object.assign(L, {leafCup:.1, leafWave:0, leafPucker:0, leafRevolute:.2});
+  if(form === "cupped") L.leafCup = .65;
+  if(form === "domed") L.leafCup = -.6;
+  if(form === "canoe") Object.assign(L, {leafFold:.55, veinRelief:Math.min(L.veinRelief, -.6)});
+  if(form === "wavy") L.leafWave = .45;
+  if(form === "dimpled") L.leafPucker = .45;
+  if(form === "recurved") L.leafRevolute = .6;
+  if(form === "wings") Object.assign(L, {leafFold:-.2, leafRevolute:.1});
+  if(form === "terete") Object.assign(L, {leafAspect:.09, leafFold:.4, leafCup:.5});
+  L.leafThick = thick === "thin" ? .06 : thick === "thick" ? .26 : .14;
+  if(form === "terete") L.leafThick = .45;
+  return words;
+}
+/* a leaf the leaf lab tuned takes the lab's settings whole; every leaf gets a grain to match its roughness */
+function leafLabDone(p, L){ leafFromLab(p, L); if(L.leafGrain == null) L.leafGrain = (L.leafRoughness == null ? .45 : L.leafRoughness) * .5; return L; }
 function leafInfo(p){
   const t = " " + (p.leaves || "").toLowerCase() + " ", n = p.name.toLowerCase(), has = (...w) => w.some(x => t.includes(x));
   const L = {leafAspect:.42, leafWidest:.45, leafShoulder:.3, leafBase:.35, leafCordate:0, leafApex:.3, leafTip:.15, leafNotch:0,
     leafFold:.1, leafCup:.1, leafArch:-.15, leafTwist:0, leafRevolute:.2, leafWave:0, leafWaves:5, leafPucker:0, leafThick:.14,
     veinStyle:0, veinCount:6, veinAngle:50, veinWidth:1, veinShow:.15, veinRelief:-.2,
     leafRoughness:.45, leafFuzz:0, leafFuzzLength:.35, leafSplashAmt:0, leafSplashSize:.35, leafVarMarginAmt:0, leafVarCenterAmt:0, leafEdgeAmt:0, leafEdgeWidth:.3,
-    leafPerNode:2, leafAttach:55, leafBlade:14, leafRoll:0, petioleLength:.35, petioleThick:1, stemThick:1, leafNodes:1, leafInternode:.9, stemCurve:1, leafNodeTurn:0, leafViewTurn:43, leafViewTilt:11,
+    leafPerNode:2, leafAttach:55, leafBlade:14, leafRoll:0, petioleLength:.35, petioleThick:1, stemThick:1, leafNodes:1, leafInternode:.9, stemCurve:1, stemCurveDir:0, leafNodeTurn:0, leafViewTurn:43, leafViewTilt:11, leafViewRoll:0,
     leafTop:"#4A7A22", leafUnder:"#8CAE4E", leafVein:"#C6DA7E", leafSplash:"#C8D3CE", leafVarMargin:"#EEE5C2", leafVarCenter:"#E3D36A", leafEdge:"#A22B2E",
-    leafSheenColor:"#FFFFFF", leafFuzzColor:"#DCE4B2", leafPetiole:"#6A8E2E"};
+    leafSheenColor:"#FFFFFF", leafFuzzColor:"#DCE4B2", leafPetiole:"#6A8E2E",
+    leafMottleCover:.5, leafMottleBalance:.5,
+    leafProfile:0, leafBaseFull:.6, leafTipFull:.85, leafDrip:.2, veinBend:0, leafSplashOpacity:.85};
   if(has("round", "rounded", "orbicular")) Object.assign(L, {leafAspect:.85, leafApex:.6, leafTip:.05, leafBase:.55});
   if(has("oval", "ellipt")) Object.assign(L, {leafAspect:.5});
   if(has("ovate") && !has("obovate")) L.leafWidest = .36;
@@ -5259,7 +5416,21 @@ function leafInfo(p){
   if(/\bno\b[^.]*\bcreases?\b/.test(t)) Object.assign(L, {leafFold:0, leafCup:0, leafPucker:0});
   if(/\b(no|without)\b[^.]*\bveins?\b/.test(t) || has("veins hidden")) Object.assign(L, {veinShow:0, veinCount:0, veinRelief:0});
 
-  return Object.assign(L, labFromReading(L, has, n));
+  /* the lab's traits, where the plant has them, decide; the vein and marking settings then read the traits' words */
+  const words = leafFromTraits(p, L);
+  if(words){ if(n.includes("kerrii")) Object.assign(L, {leafAspect:1.05, leafNotch:.75, leafCordate:0, leafWidest:.62, leafBase:.1, leafApex:.7, leafTip:0});
+    const hasT = (...w) => w.some(x => words.includes(x));
+    Object.assign(L, labFromReading(L, hasT, n));
+    /* the markings as the lab draws them */
+    const pat = L._pattern, top = L.leafTop; delete L._pattern;
+    Object.assign(L, {leafSplashAmt:0, leafMottle:0});
+    if(pat === "flecks") Object.assign(L, {leafSplashAmt:.38, leafSplashSize:.16, leafSplashVar:.75, leafSplashBlotch:0, leafSplashCluster:.15, leafSplashEdge:.15, leafSplashAvoid:.3, leafSplash:"#E6EEEC"});
+    if(pat === "spots") Object.assign(L, {leafSplashAmt:.14, leafSplashSize:.6, leafSplashVar:.15, leafSplashBlotch:0, leafSplashCluster:0, leafSplashEdge:0, leafSplashAvoid:.2, leafSplash:mix(top, "#D8DED8", .7).toUpperCase()});
+    if(pat === "mottled") Object.assign(L, {leafMottle:.6, leafMottleCover:.3, leafMottleBalance:.3, leafMottleScale:.15, leafMottleSoft:.8,
+      leafMottleLight:mix(top, "#E3EBD0", .55).toUpperCase(), leafMottleDark:mix(top, p.name === "Imbricata Maxima" ? "#4A2C55" : "#2B2440", .45).toUpperCase()});
+    if(pat === "margin") Object.assign(L, {leafMarginAmt:1, leafMarginWidth:.4, leafMarginColor:(p.name === "Burtoniae" ? "#7A2E22" : mix(top, "#1A0E0A", .6)).toUpperCase()});
+    return leafLabDone(p, L); }
+  return leafLabDone(p, Object.assign(L, labFromReading(L, has, n)));
 }
 /* the leaf engine's settings, read from the same notes: the vein framework and look, and the markings */
 function labFromReading(L, has, n){
@@ -5301,16 +5472,21 @@ function baseSpec(p){
     count:info.count, size:info.size, pediLength:1, pediThick:1, pedLength:1, calyxSize:.35, calyxBulge:.35, spin:23, dome:1, aim:.4, heroX:0, heroY:0, heroTurn:22, heroTilt:-38, dotSize:.3, dot:mix(g.inner[0], g.outer[1], .55).toUpperCase(), dotTip:mix(g.inner[0], g.outer[1], .55).toUpperCase(), gynoStop0:0, gynoStop1:1,
     pedicel:(lum(g.outer[1]) > .7 ? "#A7AE93" : mix(g.outer[1], "#FFFFFF", .45)).toUpperCase(),
     petalCentre:g.outer[0], petalTip:g.outer[1], coronaCentre:g.inner[0], coronaTip:g.inner[1],
+    throat:mix(g.inner[0], g.outer[0], .35).toUpperCase(), throatAmt:0, petalBack:mix(g.outer[1], "#FFFFFF", .3).toUpperCase(), petalBackAmt:0, petalFuse:0, petalAcumen:0, corollaSwell:0, corollaTwist:0, papillae:0,
     accent:COLORS[p.name] || NEUTRAL, accentManual:false,
     ...leafInfo(p)
   };
 }
 /* a plant's saved design over its defaults, with older saved settings brought up to date */
+/* every leaf was reset to the leaf lab on this date: leaf settings in designs saved before it are ignored */
+const LEAF_RESET = "2026-11-25T15:48:00Z";
+const isLeafKey = k => /^(leaf|vein|petiole)/.test(k) || k === "stemThick" || k === "stemCurve" || k === "stemCurveDir";
+const leafStale = o => !!o && (!o.updatedAt || o.updatedAt < LEAF_RESET);
 function savedSpec(p){
   const o = OVERRIDES[p.name], base = baseSpec(p);
   if(!o) return base;
-  const out = Object.assign({}, base);
-  for(const k of Object.keys(base)) if(o[k] !== undefined && o[k] !== null) out[k] = o[k];
+  const out = Object.assign({}, base), stale = leafStale(o);
+  for(const k of Object.keys(base)) if(o[k] !== undefined && o[k] !== null && !(stale && isLeafKey(k))) out[k] = o[k];
   /* designs saved before the gynostegium had a gradient: one color, top and base */
   if(o.dotTip == null && o.dot != null) out.dotTip = o.dot;
   /* designs saved before the corona had a shading color: the one their own corona colors give */
@@ -5502,6 +5678,25 @@ const F3D = (() => {
     /* upper half: the second half of the tip corner, the side, the first half of the sinus corner */
     const tip = G[0].f(.5), up = [[tip[0], 0]];
     up.push(...sample(G[0].f, .5, 1, tol, maxLen), ...sample(G[1].f, 0, 1, tol, maxLen), ...sample(G[2].f, 0, .5, tol, maxLen));
+    /* acumen: the last part of each lobe narrows and draws out into a fine point, from about halfway between the sinus
+       and the tip; the sinus itself doesn't move */
+    const acu = Math.max(0, Math.min(1, sp.petalAcumen || 0));
+    if(acu > .001){
+      const x0 = Math.min(...up.map(p => p[0])), x1 = tip[0], span = Math.max(.05, x1 - x0);
+      for(let i=0;i<up.length;i++){
+        const p = up[i], s = Math.max(0, Math.min(1, (p[0] - x0)/span)), w = smooth(.35, 1, s);
+        up[i] = [p[0] + acu*.16*span*w*w, p[1]*(1 - .62*acu*w)];
+      }
+    }
+    /* fused part: the corolla is one piece from the center out to this share of the way to the tips, and the lobes
+       begin only beyond it. The lobe's own outline is moved out radially to make room: a point at the center would land
+       on the circle where the fused part ends, the tips stay where they are, and every angle is kept, so the lobes keep
+       their shape and the sinuses move out with them */
+    const fz = Math.max(0, Math.min(.9, sp.petalFuse || 0));
+    if(fz > .001){
+      const rt = tip[0], rf = fz*rt;
+      for(let i=0;i<up.length;i++){ const p = up[i], r = Math.hypot(p[0], p[1]), k = r > 1e-9 ? (r + rf*(1 - r/rt))/r : 1; up[i] = [p[0]*k, p[1]*k]; }
+    }
     /* the sinus corner's midpoint lies on the 36-degree ray: set it there exactly, so neighboring lobes meet without a gap */
     const last = up[up.length-1], rs = Math.hypot(last[0], last[1]);
     up[up.length-1] = [rs*Math.cos(LOBE/2), rs*Math.sin(LOBE/2)];
@@ -5533,7 +5728,7 @@ const F3D = (() => {
   function profile(sp, rs, hLim, core){
     const rc = Math.max(.12, rs), L = Math.max(.05, 1.02 - rc);
     const depth = sp.tubeDepth || 0, bend = sp.lobeBend || 0, curl = sp.lobeCurl || 0;
-    const N = 500, maxR = 1.08, H = new Float32Array(N+1), Z = new Float32Array(N+1), A = new Float32Array(N+1);
+    const N = 600, maxR = 1.25, H = new Float32Array(N+1), Z = new Float32Array(N+1), A = new Float32Array(N+1);
     const a = depth * 1.15 / rc;
     /* the corona and gynostegium stand in a column of radius core.r and height core.h over the middle. A lobe folding
        inwards keeps clear of that column, but once it is above it, it may fold right over the middle until the tips
@@ -5545,8 +5740,10 @@ const F3D = (() => {
          tube: the cup's slope grows towards the sinuses and levels off smoothly past them */
       const x = r/rc, dlt = .3, g = x < 1-dlt ? x : x > 1+dlt ? 1 : x - (x-(1-dlt))*(x-(1-dlt))/(4*dlt);
       let al = Math.atan(2*a*rc*g);
-      /* bend: a soft hinge that starts a little inside the sinuses and finishes by mid-lobe */
-      al += bend*(Math.PI/2)*smoother((r - (rc - .1*L)) / (.5*L));
+      /* bend: a soft hinge that already starts on the outer end of the tube, a little under halfway in from the
+         sinuses, and finishes by mid-lobe, so the mouth of a cupped corolla flares out gradually like a bell */
+      const b0 = rc*.55, b1 = rc + .4*L;
+      al += bend*(Math.PI/2)*smoother((r - b0) / (b1 - b0));
       /* curl: no bend at the base, tightening fast towards the tip, so the end of the lobe rolls up
          into a real scroll (past a full turn at the strongest), forwards or backwards alike */
       const sc = Math.max(0, (r - (rc - .05*L)) / (L*1.05));
@@ -5649,7 +5846,7 @@ const F3D = (() => {
       h: Math.max(.008 + sp.coronaSize*((sp.coronaLift || 0) + (sp.coronaHeight == null ? .12 : sp.coronaHeight)*Math.max(sp.coronaThickIn == null ? 1 : sp.coronaThickIn, sp.coronaThickOut == null ? 1 : sp.coronaThickOut)
                   + sp.diaLength*.6*Math.max(0, sp.coronaLobeCurl || 0)) + tubeRise,
                   sp.dotSize > 0 ? sp.coronaSize*(sp.gynoHeight == null ? .25 : sp.gynoHeight) + (sp.coronaTube < 0 ? tubeRise : 0) : 0)};
-    const prof = profile(sp, rs, hLim, core), PG = petalGrad(sp), cr = Array.from({length:97}, (_,i) => hexRGB(gradAt(PG, i/96))), tipR = Math.hypot(lob.up[0][0], lob.up[0][1]) || 1;
+    const prof = profile(sp, rs, hLim, core), PG = petalGradFull(sp), cr = Array.from({length:97}, (_,i) => hexRGB(gradAt(PG, i/96)));
 
     /* margin roll for a point d in from the edge, inside a band of width B: how far it is drawn in, and lifted */
     const bmax = Math.abs(mc)*Math.PI*1.75*(1 - .5*Math.min(1, Math.abs(curl)));   /* most of a full turn at the strongest */
@@ -5691,7 +5888,18 @@ const F3D = (() => {
     };
     /* every column: from the center straight out to the inner side of the margin strip, then across the strip in rows
        that run parallel to the edge, each an exact distance in from it, ending on the edge itself */
-    const FLAT = [], POS = [], FUN = [];   /* FUN: each point laid flat before its margin rolls, for the hairs */
+    const FLAT = [], POS = [], FUN = [], EDGEIN = [];   /* FUN: each point laid flat before its margin rolls, for the hairs */
+    const swell = Math.max(0, Math.min(1, sp.corollaSwell || 0)), twist = Math.max(-1, Math.min(1, sp.corollaTwist || 0));
+    const tipR = Math.hypot(lob.up[0][0], lob.up[0][1]) || 1;
+    /* twist: like a pinwheel, each lobe sweeps sideways, not at all inside the sinuses and more and more toward its tip,
+       so the middle of the flower stays as it is. The sweep runs straight across the lobe (a shear along its own axis),
+       never round the center: that keeps every edge from folding back over itself, however narrow the lobe */
+    const twistPt = (x, y) => {
+      if(Math.abs(twist) <= .001) return [x, y];
+      const l = Math.round((Math.atan2(y, x) - ROT)/LOBE), a = ROT + l*LOBE, ca = Math.cos(a), sa = Math.sin(a);
+      const along = x*ca + y*sa, w = smooth(rs*.95, tipR, along), d = twist*.32*tipR*w*w;
+      return [x - sa*d, y + ca*d];
+    };
     for(let g=0;g<N;g++){
       const c = COL[g], B = nBand ? BW[g] : 0, n = IN[g];
       const Q = [c.p[0] + n[0]*B, c.p[1] + n[1]*B];               /* where the strip starts */
@@ -5707,7 +5915,19 @@ const F3D = (() => {
           const w = c.fade * (.32 + .68*Math.pow(Math.min(1, Math.max(0, (rho - rs) / Math.max(.05, 1 - rs))), 1.3));
           if(w > 0 && B > 1e-5){ const [pull, nrm] = roll(d, B); x += n[0]*pull*w; y += n[1]*pull*w; lift = Math.sign(mc)*nrm*w; }
         }
-        fl.push(Math.hypot(x,y)); fu.push([ux0, uy0]); const bn = mBend(x, y); ps.push(prof.place(bn[0], bn[1], lift + bn[2]));
+        fl.push(Math.hypot(x,y)); fu.push([ux0, uy0]); const tw = twistPt(x, y), bn = mBend(tw[0], tw[1]);
+        /* swelling: a ridge along the middle of each free lobe, highest on the midline and gone at the margins */
+        if(swell > .001){
+          const rho = Math.hypot(ux0, uy0);
+          let ph = Math.atan2(uy0, ux0) - ROT; const l = Math.round(ph/LOBE), a = ROT + l*LOBE;
+          const along = ux0*Math.cos(a) + uy0*Math.sin(a), lat = -ux0*Math.sin(a) + uy0*Math.cos(a), hw = Math.max(.01, widthAt(Math.min(1, along)));
+          const u = Math.min(1, Math.abs(lat)/hw);
+          lift += swell*.3*hw*(1 - u*u)*smooth(rs*.7, rs + .12, rho)*(1 - smooth(tipR*.82, tipR*1.02, rho));
+        }
+        ps.push(prof.place(bn[0], bn[1], lift + bn[2]));
+        /* at the edge, a point a little way in from it, placed the same way: it tells the rounded edge below which way
+           is out, even where a twist shears the rows sideways */
+        if(j === NR){ const ti = twistPt(x + n[0]*.012, y + n[1]*.012), bi = mBend(ti[0], ti[1]); EDGEIN[g] = prof.place(bi[0], bi[1], lift + bi[2]); }
       }
       FLAT.push(fl); POS.push(ps); FUN.push(fu);
     }
@@ -5746,7 +5966,9 @@ const F3D = (() => {
 
     /* ---- thickness: a back sheet behind the front along each vertex's normal, joined by a rounded edge.
        Where the surface curls tighter than the corolla is thick, the thickness shrinks so the back never pokes through. */
-    const thick = (sp.corollaThick == null ? .3 : sp.corollaThick) * .08;
+    const backAmt = Math.max(0, Math.min(1, sp.petalBackAmt || 0)), backC = hexRGB(sp.petalBack || sp.petalTip || "#FFFFFF");
+    const toBack = c => backAmt > .001 ? c.map((v, i) => Math.round(v + (backC[i] - v)*backAmt)) : c;
+    const thick = Math.max((sp.corollaThick == null ? .3 : sp.corollaThick) * .08, backAmt > .001 ? .003 : 0);
     if(thick > 1e-4){
       const at = (g, j) => j === 0 ? center : POS[wrap(g)][j-1];
       const NN = [], TK = [];
@@ -5797,16 +6019,17 @@ const F3D = (() => {
         for(let g=0;g<N;g++) TK[g] = S[g];
       }
       const back = LP.length;
-      LP.push([center[0], center[1], center[2] - thick]); LC.push(LC[0]);
+      /* the back sheet takes the underside color, as much of it as Underside asks */
+      LP.push([center[0], center[1], center[2] - thick]); LC.push(toBack(LC[0]));
       for(let g=0;g<N;g++) for(let j=1;j<=NR;j++){
         const p = POS[g][j-1], n = NN[g][j-1], t = TK[g][j-1];
-        LP.push([p[0]-n[0]*t, p[1]-n[1]*t, p[2]-n[2]*t]); LC.push(LC[fid(g,j)]);
+        LP.push([p[0]-n[0]*t, p[1]-n[1]*t, p[2]-n[2]*t]); LC.push(toBack(LC[fid(g,j)]));
       }
       const nFront = LI.length; for(let t=0;t<nFront;t++) LI.push(back + LI[t]);   /* the back sheet uses the front's triangles */
       /* the rounded edge: a half circle from the front rim, out past the rim, round to the back rim */
       const segs = Math.max(4, Math.round(6*detail)), wall = LP.length;
       for(let g=0;g<N;g++){
-        const p = POS[g][NR-1], q = POS[g][NR-2], n = NN[g][NR-1], t = TK[g][NR-1];
+        const p = POS[g][NR-1], q = EDGEIN[g] || POS[g][NR-2], n = NN[g][NR-1], t = TK[g][NR-1];
         const tg = sub(at(g+1, NR), at(g-1, NR));
         let o = crs(tg, n); if(o[0]*(p[0]-q[0]) + o[1]*(p[1]-q[1]) + o[2]*(p[2]-q[2]) < 0) o = o.map(v => -v);
         o = nrmz(o);
@@ -5814,7 +6037,8 @@ const F3D = (() => {
         for(let i=0;i<=segs;i++){
           const ph = -Math.PI/2 + i/segs*Math.PI, cc = Math.cos(ph), sn = Math.sin(ph);
           LP.push([m[0] - n[0]*(t/2)*sn + o[0]*(t/2)*cc, m[1] - n[1]*(t/2)*sn + o[1]*(t/2)*cc, m[2] - n[2]*(t/2)*sn + o[2]*(t/2)*cc]);
-          LC.push(LC[fid(g,NR)]);
+          /* the rounded edge turns from the front's color to the underside's */
+          const fc = LC[fid(g,NR)], bc = toBack(fc), q = i/segs; LC.push(fc.map((v, a) => Math.round(v + (bc[a] - v)*q)));
         }
       }
       const wid = (g,i) => wall + wrap(g)*(segs+1) + i;
@@ -6080,7 +6304,7 @@ const F3D = (() => {
     SH.fill(-shC, corStart, corEnd);
     const LS = new Float32Array(nv); LSK.forEach((k, id) => { LS[id] = k; });
     const out = {LS, light: lightOf(sp, false), P: new Float32Array(P), C: new Uint8Array(C), I: idx(I, nv), E: idx(E, nv), rim: idx(rim, nv), pale: lum(sp.petalTip) > .7, stats: {verts: nv, tris: I.length/3},
-      N: NRM, F: FZ, S: SH, LF: HUV, HD: HDIR, shiny: true,
+      N: NRM, F: FZ, S: SH, LF: HUV, HD: HDIR, shiny: true, papil: Math.max(0, Math.min(1, sp.papillae || 0)),
       coroTint: (() => { const c = hexRGB(coronaShadeOf(sp)), m = Math.max(1, ...c); return c.map(v => v/m); })(),   /* Corona shading color, brightest channel at 1 */
       trans: (sp.coronaTranslucency || 0) > 0 ? [Math.min(1, sp.coronaTranslucency), sp.coronaBlur == null ? .5 : Math.max(0, Math.min(1, sp.coronaBlur))] : null,
       sheenCols: [hexRGB(sp.sheenColor || "#FFFFFF").map(v => v/255), hexRGB(sp.coronaSheenColor || "#FFFFFF").map(v => v/255)], fuzz: fzA > 0 ? {col: hexRGB(sp.fuzzColor || mix(sp.petalTip, "#FFFFFF", .55)).map(v => v/255), len: .004 + .03*(sp.fuzzLength == null ? .4 : sp.fuzzLength), dens: sp.fuzzDensity == null ? 1 : sp.fuzzDensity} : null};
@@ -6145,7 +6369,7 @@ const F3D = (() => {
     uniform sampler2D bgTex; uniform vec4 bgInfo; uniform vec2 bgSize; uniform float bgPass; uniform vec3 coroTint;
     /* shading on the corona: the same darkening, tinted a little towards its own hue rather than gray (d: how much darker, 0 to 1) */
     vec3 coroShade(vec3 c, float d){ return c * (1. - d) * (vec3(1.) - min(.45, d * 1.1) * (vec3(1.) - coroTint)); }
-    uniform vec4 tint; uniform float lineMode; uniform vec3 fuzzCol; uniform vec3 sheenCol; uniform vec3 sheenCol2; uniform float shell; uniform float dens; uniform float hairRad;
+    uniform vec4 tint; uniform float lineMode; uniform vec3 fuzzCol; uniform vec3 sheenCol; uniform vec3 sheenCol2; uniform float papil; uniform float shell; uniform float dens; uniform float hairRad;
     float h3(vec3 v){ return fract(sin(dot(v, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
     /* soft shading from the part's light, on the solid parts (ls): 1 corona (its shade tinted by coroTint), 2 gynostegium
        (tinted towards its own hue), 3 flower stalks, 4 leaf blade, 5 petiole and stem. The corolla takes the same light
@@ -6245,23 +6469,27 @@ const F3D = (() => {
         col = vsh < 0. && fsh < 1. ? coroShade(col, 1. - fsh) : col * fsh;
         col += rr * .06 * sc * pow(1. - ndv, 2.);
         col = mix(col, sc, clamp(spec * (1. - .6 * vfz), 0., .85));
+        /* papillae: tiny bumps on the corolla catch the light where it turns away from the eye, a soft pale sheen
+           toward the sheen color, strongest at grazing angles */
+        if(vsh > .5 && papil > .001) col = mix(col, mix(vec3(1.), sc, .4), clamp(papil * .55 * pow(1. - ndv, 1.7) * (.6 + .4 * ndl), 0., .6));
       }
       gl_FragColor = vec4(col * va, va); }`;   /* premultiplied, as the canvas expects, so fading parts fade into the page */
   /* column-major 4x4 helpers */
   const mul = (A,B) => { const o = new Array(16).fill(0); for(let c=0;c<4;c++) for(let r=0;r<4;r++) for(let k=0;k<4;k++) o[c*4+r] += A[k*4+r]*B[c*4+k]; return o; };
-  function mat(yaw, pitch, aspect, dist){
+  function mat(yaw, pitch, aspect, dist, roll){
     const f = 1/Math.tan(15*Math.PI/180), n = .1, fa = 20;
     const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
     const Ry = [cy,0,-sy,0, 0,1,0,0, sy,0,cy,0, 0,0,0,1];          /* turn left and right */
     const Rx = [1,0,0,0, 0,cp,sp,0, 0,-sp,cp,0, 0,0,0,1];          /* tilt towards and away */
     const T  = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,-dist,1];
     const Pm = [f/aspect,0,0,0, 0,f,0,0, 0,0,(fa+n)/(n-fa),-1, 0,0,2*fa*n/(n-fa),0];
-    return new Float32Array(mul(Pm, mul(T, mul(Rx, Ry))));
+    const cr = Math.cos(roll || 0), sr = Math.sin(roll || 0), Rz = [cr,sr,0,0, -sr,cr,0,0, 0,0,1,0, 0,0,0,1];   /* turn around the line of sight */
+    return new Float32Array(mul(Pm, mul(T, mul(Rz, mul(Rx, Ry)))));
   }
   /* just the turning part of the view, for normals */
-  function rotOf(yaw, pitch){
-    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-    return mul([1,0,0,0, 0,cp,sp,0, 0,-sp,cp,0, 0,0,0,1], [cy,0,-sy,0, 0,1,0,0, sy,0,cy,0, 0,0,0,1]);
+  function rotOf(yaw, pitch, roll){
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll || 0), sr = Math.sin(roll || 0);
+    return mul([cr,sr,0,0, -sr,cr,0,0, 0,0,1,0, 0,0,0,1], mul([1,0,0,0, 0,cp,sp,0, 0,-sp,cp,0, 0,0,0,1], [cy,0,-sy,0, 0,1,0,0, sy,0,cy,0, 0,0,0,1]));
   }
   const SHELLS = 10;
   const VIEWS = {front:[0,0], three:[.38,-.66], side:[Math.PI/2,0]};
@@ -6519,13 +6747,13 @@ const F3D = (() => {
     gl.linkProgram(pr); gl.useProgram(pr);
     const U = k => gl.getUniformLocation(pr, k);
     const loc = {p: gl.getAttribLocation(pr,"p"), c: gl.getAttribLocation(pr,"c"), al: gl.getAttribLocation(pr,"al"), n: gl.getAttribLocation(pr,"n"), fz: gl.getAttribLocation(pr,"fz"), sh: gl.getAttribLocation(pr,"sh"),
-      m: U("m"), nm: U("nm"), tint: U("tint"), line: U("lineMode"), fuzzCol: U("fuzzCol"), shell: U("shell"), hairLen: U("hairLen"), dens: U("dens"), hairRad: U("hairRad"), sheenCol: U("sheenCol"), sheenCol2: U("sheenCol2"),
+      m: U("m"), nm: U("nm"), tint: U("tint"), line: U("lineMode"), fuzzCol: U("fuzzCol"), shell: U("shell"), hairLen: U("hairLen"), dens: U("dens"), hairRad: U("hairRad"), sheenCol: U("sheenCol"), sheenCol2: U("sheenCol2"), papil: U("papil"),
       lf: gl.getAttribLocation(pr, "lf"), hd: gl.getAttribLocation(pr, "hd"), splash: U("splash"), splashCol: U("splashCol"), splashBase: U("splashBase"), leafTex: U("leafTex"), texOn: U("texOn"), texMap: U("texMap"),
       bgTex: U("bgTex"), bgInfo: U("bgInfo"), bgSize: U("bgSize"), bgPass: U("bgPass"), coroTint: U("coroTint"), ls: gl.getAttribLocation(pr, "ls"), lightDir: U("lightDir")};
     gl.getExtension("OES_element_index_uint");
     gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     const v0 = VIEWS[startView || "three"];
-    const st = {yaw: v0[0], pitch: v0[1], ty: v0[0], tp: v0[1], wire: false, parts: [], raf: 0};
+    const st = {yaw: v0[0], pitch: v0[1], ty: v0[0], tp: v0[1], roll: 0, tr: 0, wire: false, parts: [], raf: 0};
     /* a part is one mesh drawn once for each of its matrices */
     /* a leaf texture on the GPU, with its smaller versions for leaves drawn small */
     function upload(cv){
@@ -6544,7 +6772,7 @@ const F3D = (() => {
         r: lines && m.rim ? mk(gl.ELEMENT_ARRAY_BUFFER, m.rim) : null, nr: m.rim ? m.rim.length : 0, pale: m.pale, mats,
         nb: m.N && (m.fuzz || m.shiny || m.LS) ? mk(gl.ARRAY_BUFFER, m.N) : null, fb: m.F && (m.fuzz || m.shiny || m.LS) ? mk(gl.ARRAY_BUFFER, m.F) : null,
         kb: m.LS ? mk(gl.ARRAY_BUFFER, m.LS) : null, light: m.light || null,
-        sb: m.S && m.shiny ? mk(gl.ARRAY_BUFFER, m.S) : null, sheenCols: m.sheenCols, trans: m.trans || null, coroTint: m.coroTint || [1, 1, 1], fuzz: m.fuzz, shells: !!(shells && m.fuzz), fzk: fzk || 1,
+        sb: m.S && m.shiny ? mk(gl.ARRAY_BUFFER, m.S) : null, papil: m.papil || 0, sheenCols: m.sheenCols, trans: m.trans || null, coroTint: m.coroTint || [1, 1, 1], fuzz: m.fuzz, shells: !!(shells && m.fuzz), fzk: fzk || 1,
         lb: m.LF ? mk(gl.ARRAY_BUFFER, m.LF) : null, hb: m.HD ? mk(gl.ARRAY_BUFFER, m.HD) : null, splash: m.splash,
         tex: m.tex ? upload(m.tex.canvas) : null, texMap: m.tex ? m.tex.map : null};
     }
@@ -6555,7 +6783,7 @@ const F3D = (() => {
     function draw(){
       const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1)), w = fixed || Math.round(canvas.clientWidth*dpr), h = fixed || Math.round(canvas.clientHeight*dpr);
       if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
-      const V = mat(st.yaw, st.pitch, w/Math.max(1,h), 4.6), RV = rotOf(st.yaw, st.pitch);
+      const V = mat(st.yaw, st.pitch, w/Math.max(1,h), 4.6, st.roll), RV = rotOf(st.yaw, st.pitch, st.roll);
       /* a translucent corona needs a picture of what lies behind it: the scene drawn first without the corona into a
          square, power-of-two texture (so it can have blurred, smaller versions), which the corona then reads */
       const tr = st.parts.find(pt => pt.trans);
@@ -6608,7 +6836,7 @@ const F3D = (() => {
             gl.uniform1f(loc.hairRad, Math.min(.5, .5*Math.sqrt(pt.fuzz.dens)));   /* sparse hairs keep their thickness; packed ones get finer */ } }
         else { gl.disableVertexAttribArray(loc.n); gl.vertexAttrib3f(loc.n, 0, 0, 1); gl.disableVertexAttribArray(loc.fz); gl.vertexAttrib1f(loc.fz, 0); }
         if(pt.sb){ gl.bindBuffer(gl.ARRAY_BUFFER, pt.sb); gl.enableVertexAttribArray(loc.sh); gl.vertexAttribPointer(loc.sh, 1, gl.FLOAT, false, 0, 0);
-          gl.uniform3fv(loc.sheenCol, pt.sheenCols[0]); gl.uniform3fv(loc.sheenCol2, pt.sheenCols[1]); }
+          gl.uniform3fv(loc.sheenCol, pt.sheenCols[0]); gl.uniform3fv(loc.sheenCol2, pt.sheenCols[1]); gl.uniform1f(loc.papil, pt.papil || 0); }
         else { gl.disableVertexAttribArray(loc.sh); gl.vertexAttrib1f(loc.sh, 0); }
         if(pt.lb && loc.lf >= 0){ gl.bindBuffer(gl.ARRAY_BUFFER, pt.lb); gl.enableVertexAttribArray(loc.lf); gl.vertexAttribPointer(loc.lf, 3, gl.FLOAT, false, 0, 0);
           const sp = pt.splash; if(sp){ gl.uniform4f(loc.splash, sp.amt, sp.size, sp.ang, 0); gl.uniform3fv(loc.splashCol, sp.col); gl.uniform3fv(loc.splashBase, sp.base); } else gl.uniform4f(loc.splash, 0, 0, 0, 0); }
@@ -6653,8 +6881,8 @@ const F3D = (() => {
     }
     /* turning eases towards the target, so drags and view changes never jump */
     function tick(){
-      st.yaw += (st.ty - st.yaw)*.16; st.pitch += (st.tp - st.pitch)*.16; draw();
-      if(Math.abs(st.ty - st.yaw) + Math.abs(st.tp - st.pitch) > 1e-4 || st.drag) st.raf = requestAnimationFrame(tick); else st.raf = 0;
+      st.yaw += (st.ty - st.yaw)*.16; st.pitch += (st.tp - st.pitch)*.16; st.roll += (st.tr - st.roll)*.16; draw();
+      if(Math.abs(st.ty - st.yaw) + Math.abs(st.tp - st.pitch) + Math.abs(st.tr - st.roll) > 1e-4 || st.drag) st.raf = requestAnimationFrame(tick); else st.raf = 0;
     }
     const kick = () => { if(!st.raf) st.raf = requestAnimationFrame(tick); };
     let px = 0, py = 0;
@@ -6673,8 +6901,8 @@ const F3D = (() => {
       umbel(sp, seed, hairs, big){ const sc = umbelScene(sp, seed, big); setParts([makePart(sc.ped, [sc.fit], false), makePart(sc.flower, sc.mats, true, !!hairs), makePart(sc.stem, [sc.fit], false)]); },
       /* the leaf views: one leaf on its petiole, or an opposite pair on the stem; the close-up shows true fuzz */
       leaf(sp, pair, zoom){ const sc = leafScene(sp, pair, zoom); setParts((sc.pair ? sc.pets.map(p => makePart(p, [sc.fit], false)) : [makePart(sc.pet, sc.mats, false)]).concat([makePart(sc.leaf, sc.mats, true, true)], sc.stem ? [makePart(sc.stem, [sc.fit], false)] : [])); },
-      angle(yaw, pitch){ st.yaw = st.ty = yaw; st.pitch = st.tp = pitch; draw(); },
-      turnTo(yaw, pitch){ const k = Math.round((st.yaw - yaw) / TAU); st.ty = yaw + k*TAU; st.tp = pitch; kick(); },   /* eased, the shortest way round */
+      angle(yaw, pitch, roll){ st.yaw = st.ty = yaw; st.pitch = st.tp = pitch; st.roll = st.tr = roll || 0; draw(); },
+      turnTo(yaw, pitch, roll){ const k = Math.round((st.yaw - yaw) / TAU); st.ty = yaw + k*TAU; st.tp = pitch; roll = roll || 0; st.tr = roll + Math.round((st.roll - roll) / TAU)*TAU; kick(); },   /* eased, the shortest way round */
       view(name){ const v = VIEWS[name]; if(!v) return; const k = Math.round((st.yaw - v[0]) / TAU); st.ty = v[0] + k*TAU; st.tp = v[1]; kick(); },
       wire(on){ st.wire = on; draw(); }
     };
@@ -6742,6 +6970,26 @@ const F3D = (() => {
      leaf's thickness, which thins to nothing at the margin, so the edge is a soft, rounded seam. */
   function leafOutline(sp){
     const L = 2, W = Math.max(.02, (sp.leafAspect == null ? .45 : sp.leafAspect)) * L / 2;
+    /* without basal lobes the base always closes in a curve onto the petiole, never a square end: the outline is kept
+       inside a half circle as wide as the leaf (a soft minimum, so it only takes over where the base would be fuller
+       than that). Basal lobes need the full base, so the limit fades out as they grow */
+    const lobes = Math.max(0, Math.min(1, (sp.leafCordate || 0) / .15)), ub = W / L;
+    const roundBase = (f, u) => {
+      if(lobes >= 1 || u >= ub) return f;
+      const c = W*Math.sqrt(Math.max(0, 1 - Math.pow(1 - u/ub, 2))), k = W*.12;
+      const h = Math.max(k - Math.abs(f - c), 0) / k, m = Math.min(f, c) - h*h*k*.25;
+      const q = Math.max(0, Math.min(1, (u/ub - .6)/.4)), fade = Math.max(lobes, q*q*(3 - 2*q));   /* eases off before the half circle's end, so no step */
+      return m + (f - m)*fade;
+    };
+    /* the leaf lab's profile: its width curve, with full or tapered base and tip and an acuminate drip */
+    if(sp.leafProfile >= .5){
+      const lerp = (a, b, t) => a + (b - a)*t, sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a)/(b - a))); return t*t*(3 - 2*t); };
+      const ex = Math.log(.5) / Math.log(Math.max(.12, Math.min(.88, sp.leafWidest == null ? .45 : sp.leafWidest)));
+      const bf = sp.leafBaseFull == null ? .6 : sp.leafBaseFull, tf = sp.leafTipFull == null ? .85 : sp.leafTipFull, dr = sp.leafDrip || 0;
+      const outer = u => { if(u <= 0 || u >= 1) return 0; const q = Math.pow(u, ex); let v = Math.pow(Math.sin(Math.PI*q), q < .5 ? lerp(1.15, .3, bf) : lerp(1.3, .35, tf));
+        if(dr) v *= 1 - dr*.62*sstep(.5, .96, u); return Math.max(0, roundBase(W*v, u)); };
+      return {L, W, outer, inner: () => 0, y0: 0, y1: L};
+    }
     const p = sp.leafWidest == null ? .45 : sp.leafWidest, eb = 1 + 2.2*(sp.leafBase == null ? .4 : sp.leafBase), ea = 1 + 2.2*(sp.leafApex == null ? .3 : sp.leafApex);
     const tipL = .3*(sp.leafTip || 0), cd = .22*(sp.leafCordate || 0), nd = .22*(sp.leafNotch || 0);
     const se = (t, e) => Math.pow(Math.max(0, 1 - Math.pow(Math.min(1, Math.max(0, t)), e)), 1/e);
@@ -6766,7 +7014,7 @@ const F3D = (() => {
     const smax = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h*h*k*.25*Math.min(1, (a + b)/k); };   /* the blend fades out as both reach 0, so the tip closes to a true point */
     const xl = W*.42*(sp.leafNotch || 0), xb = W*.36*(sp.leafCordate || 0);
     const outer = u => {
-      let f = W * (tipL > 0 ? smax(body(u), tail(u), .08) : body(u));
+      let f = roundBase(W * (tipL > 0 ? smax(body(u), tail(u), .08) : body(u)), u);
       if(nd > 0) f += xl * Math.pow(Math.min(1, Math.max(0, (u - (1 - nd*1.8)) / (nd*1.8))), 1.5);   /* the two apex lobes */
       if(cd > 0) f += xb * Math.pow(Math.max(0, 1 - u/(cd*1.8)), 1.5);                             /* the two basal lobes */
       return f;
@@ -6789,7 +7037,7 @@ const F3D = (() => {
     const n = (k, d) => sp[k] == null ? d : sp[k];
     return {
       seed: n("leafSeed", 7), aspect: n("leafAspect", .45), framework: n("veinBasal", 0) > 0 ? "acrodromous" : "pinnate", basalPairs: Math.max(1, Math.round(n("veinBasal", 1))),
-      acroReach: n("veinReach", .88), midribWidth: n("veinWidth", 1), midBend: 0, secCount: n("veinCount", 8), angleTop: n("veinAngleTop", 45), angleBase: n("veinAngle", 65),
+      acroReach: n("veinReach", .88), midribWidth: n("veinWidth", 1), midBend: n("veinBend", 0), secCount: n("veinCount", 8), angleTop: n("veinAngleTop", 45), angleBase: n("veinAngle", 65),
       secDepart: n("veinDepart", .3), secCurve: n("veinArch", .55), archSmooth: n("veinArchSmooth", .4), spacingGrowth: n("veinSpacing", .5), secIrregular: n("veinIrregular", .35),
       secAlternate: n("veinAlternate", .5), ending: ["loops", "margin", "fade"][Math.max(0, Math.min(2, Math.round(n("veinEnd", 0))))], loopDist: n("veinLoop", .78),
       festoon: Math.round(n("veinFestoon", 1)), interSec: n("veinInter", .25), secWidth: n("veinSecWidth", .55),
@@ -6798,19 +7046,19 @@ const F3D = (() => {
       cPrimary: n("veinMid", .4), cSecondary: n("veinSec", .3), cMinor: n("veinMinor", .1), veinTint: n("leafVein", "#C6DA7E"), relief: n("veinRelief", .1), pillow: n("veinPillow", .2),
       base: n("leafTop", "#4A7A22"), midGlow: n("leafMidGlow", .25), edgeDark: n("leafEdgeDark", .3), colorNoise: n("leafUneven", .25),
       splash: n("leafSplashAmt", 0), splashSize: n("leafSplashSize", .35), splashVar: n("leafSplashVar", .5), splashCluster: n("leafSplashCluster", .4), splashBlotch: n("leafSplashBlotch", .15),
-      splashAvoid: n("leafSplashAvoid", .6), splashEdge: n("leafSplashEdge", .3), splashColor: n("leafSplash", "#C8D3CE"), splashOpacity: .85,
-      mottle: n("leafMottle", 0), mottleScale: n("leafMottleScale", .6), mottleSoft: n("leafMottleSoft", .4), mottleLight: n("leafMottleLight", "#9DB57E"), mottleDark: n("leafMottleDark", "#3B3448"),
+      splashAvoid: n("leafSplashAvoid", .6), splashEdge: n("leafSplashEdge", .3), splashColor: n("leafSplash", "#C8D3CE"), splashOpacity: n("leafSplashOpacity", .85),
+      mottle: n("leafMottle", 0), mottleScale: n("leafMottleScale", .6), mottleSoft: n("leafMottleSoft", .4), mottleLight: n("leafMottleLight", "#9DB57E"), mottleDark: n("leafMottleDark", "#3B3448"), mottleCover: n("leafMottleCover", .5), mottleDarkShare: n("leafMottleBalance", .5),
       varMode: "none", varMargin: n("leafVarMarginAmt", 0), varCenter: n("leafVarCenterAmt", 0), varIrregular: n("leafVarRagged", .55), varVeins: n("leafVarVeins", .4),
       varColor: n("leafVarMargin", "#EEE5C2"), varColorC: n("leafVarCenter", "#E3D36A"), varBand: mix(n("leafTop", "#4A7A22"), n("leafVarMargin", "#EEE5C2"), .5),
       margin: n("leafMarginAmt", 0), marginWidth: n("leafMarginWidth", .25), marginColor: n("leafMarginColor", "#5A1E1A"),
       stress: n("leafEdgeAmt", 0), stressColor: n("leafEdge", "#A22B2E"), stressEdge: n("leafEdgeWidth", .6), stressPatch: n("leafStressPatch", .45), stressVeins: n("leafStressVeins", -.3),
-      gloss: 0, rough: n("leafRoughness", .45) * .5, fuzz: 0, curvature: 0,
+      gloss: 0, rough: sp.leafGrain == null ? n("leafRoughness", .45) * .5 : sp.leafGrain, fuzz: 0, curvature: 0,
     };
   }
   /* the leaf's texture: rendered once per design and kept. While someone is dragging a slider in the builder, a quick
      low-resolution version stands in, and the full one follows as soon as they pause */
   const LEAF_TEX = new Map(), LEAF_LO = new Map(); let texLast = 0, texTimer = 0, texN = 0;
-  const OUTLINE_KEYS = ["leafAspect","leafWidest","leafShoulder","leafBase","leafCordate","leafApex","leafTip","leafNotch"];
+  const OUTLINE_KEYS = ["leafProfile","leafBaseFull","leafTipFull","leafDrip","leafAspect","leafWidest","leafShoulder","leafBase","leafCordate","leafApex","leafTip","leafNotch"];
   function leafTexture(sp, O){
     if(typeof LeafEngine === "undefined") return null;
     const P = labParams(sp), key = JSON.stringify(P) + "|" + OUTLINE_KEYS.map(k => sp[k]).join(",");
@@ -7106,7 +7354,7 @@ const F3D = (() => {
          bends to suit both, smoothly, however they are set; the leaf sits Petiole length out from the node */
       const bA = (sp.leafBlade == null ? 14 : sp.leafBlade) * Math.PI/180;
       const tJl = [0, -Math.cos(phi), Math.sin(phi)];                      /* outwards from the blade at its base, in the leaf's frame */
-      const setM = [], setP = [];   /* one node's leaves and petioles, built at the origin and placed on the stem below */
+      const setM = [], setP = [], setS = [];   /* one node's leaves and petioles, built at the origin and placed on the stem below; setS: their side */
       for(const sd of (Math.round(sp.leafPerNode || 2) === 1 ? [1] : [1, -1])){   /* one leaf at the node, or an opposite pair */
         const Y = [sd*Math.cos(bA), Math.sin(bA), 0], Z0 = [0, 0, 1], X0 = [Y[1]*Z0[2]-Y[2]*Z0[1], Y[2]*Z0[0]-Y[0]*Z0[2], Y[0]*Z0[1]-Y[1]*Z0[0]];
         /* rotation: each leaf turns on its own petiole, mirrored on the two sides so the pair stays symmetrical */
@@ -7119,7 +7367,7 @@ const F3D = (() => {
         const mid2 = (a + bA)/2, Jw = [Nd[0] + sd*Math.cos(mid2)*pl, Nd[1] + Math.sin(mid2)*pl, 0];   /* where the blade's base sits */
         const Jl = rot(J), T = [Jw[0] - Jl[0], Jw[1] - Jl[1], Jw[2] - Jl[2]];
         const M = [X[0],X[1],X[2],0, Y[0],Y[1],Y[2],0, Z[0],Z[1],Z[2],0, T[0],T[1],T[2],1];
-        setM.push(M);
+        setM.push(M); setS.push(sd);
         const toW = v => { const r = rot(v); return [r[0] + T[0], r[1] + T[1], r[2] + T[2]]; };
         const dJ = rot(tJl), span = Math.hypot(Jw[0] - Nd[0], Jw[1] - Nd[1], Jw[2] - Nd[2]);
         const C1 = Nd.map((v, i) => v + dN[i]*span*.42), C2 = Jw.map((v, i) => v + dJ[i]*span*.42);
@@ -7142,8 +7390,10 @@ const F3D = (() => {
       const two = Math.round(sp.leafNodes || 1) >= 2, D = two ? O.L*(sp.leafInternode == null ? .9 : sp.leafInternode) : 0, cv = sp.stemCurve == null ? 1 : sp.stemCurve;
       const half = O.L*.4, up = Math.max(half*.08, nodeR*3.2), down = Math.max(half*.035, nodeR*1.4), cap = nodeR*1.3;
       const yc = two ? (D - half)/2 + half*.5 : 0, hs = two ? (D + half)/2 + half*.25 : half;   /* the bow's middle and half-length */
-      const cl = yy => { const q = (yy - yc)/hs; return [cv*hs*.16*q*q, yy, -sr*.3 - cv*hs*.08*q*q]; };
-      const tg = yy => { const q = (yy - yc)/hs, v = [cv*.32*q, 1, -cv*.16*q], l = Math.hypot(...v); return v.map(x => x/l); };
+      /* Stem curve direction turns the bow around the stem: the sideways and backward parts of the bow, rotated together */
+      const cd = (sp.stemCurveDir || 0)*Math.PI/180, bx = .16*Math.cos(cd) - .08*Math.sin(cd), bz = -.16*Math.sin(cd) - .08*Math.cos(cd);
+      const cl = yy => { const q = (yy - yc)/hs; return [cv*hs*bx*q*q, yy, -sr*.3 + cv*hs*bz*q*q]; };
+      const tg = yy => { const q = (yy - yc)/hs, v = [cv*2*bx*q, 1, cv*2*bz*q], l = Math.hypot(...v); return v.map(x => x/l); };
       const node = (yy, y0) => { const d = yy < y0 ? (y0 - yy)/up : (yy - y0)/down; return d >= 1 ? 0 : Math.pow(Math.cos(d*Math.PI/2), 1.5); };
       /* each node's leaves: placed where the stem passes, turned to follow its direction there */
       for(const y0 of two ? [0, D] : [0]){
@@ -7159,13 +7409,19 @@ const F3D = (() => {
         const T = [o[0], o[1], o[2] + sr*.3];
         const Nm = [R[0],R[1],R[2],0, R[3],R[4],R[5],0, R[6],R[7],R[8],0, T[0],T[1],T[2],1];
         const ap = v => [R[0]*v[0] + R[3]*v[1] + R[6]*v[2] + T[0], R[1]*v[0] + R[4]*v[1] + R[7]*v[2] + T[1], R[2]*v[0] + R[5]*v[1] + R[8]*v[2] + T[2]];
-        setM.forEach(M => { const M2 = mul(Nm, mul(Ry, M)); mats.push(M2); grow(leaf.P, M2); });
-        setP.forEach(({W, R: rr, pcl}) => { const pw = leafTube(W.map(v => ap(ry(v))), rr, pcl, null, sp); pets.push(pw); grow(pw.P, null); });
+        /* the second node, at the growing tip, is younger: its leaves are a little smaller and held a little closer to
+           the stem (turned up toward the tip about the node) */
+        const young = y0 > 0, ys = young ? .86 : 1, yt = young ? 9*Math.PI/180 : 0;
+        const K = sd => { const t = sd*yt, c = Math.cos(t)*ys, n = Math.sin(t)*ys; return [c,n,0,0, -n,c,0,0, 0,0,ys,0, 0,0,0,1]; };
+        const kv = (sd, v) => { const t = sd*yt, c = Math.cos(t)*ys, n = Math.sin(t)*ys; return [c*v[0] - n*v[1], n*v[0] + c*v[1], ys*v[2]]; };
+        setM.forEach((M, i) => { const M2 = mul(Nm, mul(Ry, young ? mul(K(setS[i]), M) : M)); mats.push(M2); grow(leaf.P, M2); });
+        setP.forEach(({W, R: rr, pcl}, i) => { const pw = leafTube(W.map(v => ap(ry(young ? kv(setS[i], v) : v))), young ? rr.map(r => r*ys) : rr, pcl, null, sp); pets.push(pw); grow(pw.P, null); });
       }
       const yTop = two ? D + cap : half, NS = two ? 140 : 90, sPts = [], sRad = [], sA = [];
       for(let j=0;j<=NS;j++){ const t = j/NS, yy = -half + (yTop + half)*t;
-        let r = sr + sw*Math.max(node(yy, 0), two ? node(yy, D) : 0);
-        if(two && yy > D) r = Math.max(sr*.05, (sr + sw*node(yy, D))*Math.sqrt(Math.max(0, 1 - Math.pow((yy - D)/cap, 2))));   /* the rounded tip */
+        /* the node at the tip is younger, so it swells a little less */
+        let r = sr + Math.max(sw*node(yy, 0), two ? sw*.72*node(yy, D) : 0);
+        if(two && yy > D) r = Math.max(sr*.05, (sr + sw*.72*node(yy, D))*Math.sqrt(Math.max(0, 1 - Math.pow((yy - D)/cap, 2))));   /* the rounded tip */
         sPts.push(cl(yy)); sRad.push(r);
         sA.push(two ? Math.min(1, t*(yTop + half)/(half*.6)) : Math.min(1, Math.min(t, 1 - t)/.3)); }
       stem = leafTube(sPts, sRad, hexRGB(sp.leafStem || sp.leafPetiole || "#5E7A45"), sA, sp);
@@ -7184,7 +7440,14 @@ const F3D = (() => {
     oc.slope = u => (oc.at(Math.min(1, u + .002)) - oc.at(Math.max(0, u - .002)))/.004;
     return LeafEngine.render(labParams(sp), {view, H, outline: oc});
   }
-  return {mount, build, stillOf, cached, flowerStill, leafStill, gradExtents, leafScene, flowerOnly, leafOutline, leafFlat};
+  /* the corolla's outline as an SVG path, all five lobes, for the flat drawings: the first lobe points along rot */
+  function corollaPath(sp, R, rot){
+    const lob = lobeOutline(sp, 3*Math.PI/180, .03); let d = "";
+    for(let l=0;l<5;l++){ const a = rot + l*LOBE, c = Math.cos(a), s = Math.sin(a);
+      lob.pts.forEach((p, i) => { if(l && !i) return; d += (d ? "L" : "M") + (R*(p[0]*c - p[1]*s)).toFixed(2) + " " + (R*(p[0]*s + p[1]*c)).toFixed(2); }); }
+    return d + "Z";
+  }
+  return {mount, build, stillOf, cached, flowerStill, leafStill, gradExtents, corollaPath, leafScene, flowerOnly, leafOutline, leafFlat};
 })();
 
 /* Even spacing over the dome (centroidal Voronoi, or Lloyd relaxation). The dome is covered with a fine,
@@ -7236,12 +7499,12 @@ function drawSpec(sp, seed, label, single){
     const X = F3D.gradExtents(sp), cIn = R*X.cIn, cOut = R*X.cOut, c0 = sp.coronaStop0 || 0, c1 = sp.coronaStop1 == null ? 1 : sp.coronaStop1;
     const at = t => (cIn + (cOut - cIn)*t) / Math.max(1e-6, cOut);
     return `<defs>
-    <radialGradient id="${id}o" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="${(R*X.tip).toFixed(3)}">${okStopsN(petalGrad(sp))}</radialGradient>
+    <radialGradient id="${id}o" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="${(R*X.tip).toFixed(3)}">${okStopsN(petalGradFull(sp))}</radialGradient>
     <radialGradient id="${id}i" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="${cOut.toFixed(3)}">${okStops(sp.coronaCentre, sp.coronaTip, at(c0), at(c1))}</radialGradient>
   </defs>`; };
   const n = single ? 1 : Math.round(sp.count), s = 8 * sp.size, turn = (h % 628) / 100;
   const flower = (R, rot) =>
-    `<path d="${starPath(0,0,R,rot,sp.petalWidth,sp.roundness,sp.petalBulge,0,sp.petalInner)}" fill="url(#${id}o)" stroke="${edge}" stroke-width="${single ? edgeW*.6 : edgeW}" stroke-linejoin="round"/>` +
+    `<path d="${(sp.petalFuse || 0) > .001 || (sp.petalAcumen || 0) > .001 ? F3D.corollaPath(sp, R, rot) : starPath(0,0,R,rot,sp.petalWidth,sp.roundness,sp.petalBulge,0,sp.petalInner)}" fill="url(#${id}o)" stroke="${edge}" stroke-width="${single ? edgeW*.6 : edgeW}" stroke-linejoin="round"/>` +
     /* the center: a circle at the very middle, under five diamonds laid out as the star turned exactly upside down */
     `<circle r="${(R*sp.coronaSize*sp.dotSize).toFixed(2)}" fill="${sp.dot}"/>` +
     `<path d="${coronaPath(0,0,R*sp.coronaSize,rot+Math.PI,sp.diaDist,sp.diaLength,sp.diaWidth,sp.coronaRound,sp.coronaBulge,sp.coronaCurl,sp.coronaInner,sp.diaMid,sp.diaMidRound)}" fill="url(#${id}i)"/>`;
@@ -7295,7 +7558,7 @@ function drawSpec(sp, seed, label, single){
     const deg = f.ang * 180 / Math.PI, X = ox + f.X*fit, Y = oy + f.Y*fit;
     const shade = Math.max(0, .5 - f.face) * .3;                  /* flowers turned away sit in shadow */
     out.push(`<g transform="translate(${X.toFixed(2)} ${Y.toFixed(2)}) rotate(${deg.toFixed(1)}) scale(${f.c.toFixed(3)} 1) rotate(${(-deg).toFixed(1)})">${flower(R, -Math.PI/2 + jitter)}` +
-      (shade > .01 ? `<path d="${starPath(0,0,R,-Math.PI/2 + jitter,sp.petalWidth,sp.roundness,sp.petalBulge,0,sp.petalInner)}" fill="#000" fill-opacity="${shade.toFixed(3)}"/>` : "") + `</g>`);
+      (shade > .01 ? `<path d="${(sp.petalFuse || 0) > .001 || (sp.petalAcumen || 0) > .001 ? F3D.corollaPath(sp, R, -Math.PI/2 + jitter) : starPath(0,0,R,-Math.PI/2 + jitter,sp.petalWidth,sp.roundness,sp.petalBulge,0,sp.petalInner)}" fill="#000" fill-opacity="${shade.toFixed(3)}"/>` : "") + `</g>`);
   });
   return `<svg class="art" viewBox="0 0 100 100" overflow="visible" style="overflow:visible" role="img" aria-label="${esc(label)}">${defs(R)}${out.join("")}</svg>`;
 }
@@ -7312,10 +7575,10 @@ function umbel(p, view){
    A plant with a saved design shows the pictures saved with it (uploaded to the site's assets when the design was
    saved); every other plant shows the pictures that ship with the site, drawn from its photo-based design.
    RENDER_V goes up whenever the 3D drawing itself changes, so older pictures are drawn again */
-const RENDER_V = 6, RENDERS_V = 4, PIC_KINDS = ["front", "three", "flower", "leaf", "thumb"];
+const RENDER_V = 8, RENDERS_V = 8, PIC_KINDS = ["front", "three", "flower", "leaf", "thumb"];
 function picSrc(p, kind){
   const o = OVERRIDES[p.name];
-  if(o && o.images){ const id = o.images[kind] || (kind === "thumb" && o.images.front); if(id) return "/_blob/" + id; }
+  if(o && o.images && !(kind === "leaf" && leafStale(o))){ const id = o.images[kind] || (kind === "thumb" && o.images.front); if(id) return "/_blob/" + id; }
   return "renders/" + slug(p.name) + "-" + kind + ".webp?v=" + RENDERS_V;
 }
 /* ---------- local picture store ----------
@@ -7489,7 +7752,9 @@ async function syncPictures(){
     const sp = savedSpec(p);
     try{
       const ids = await uploadPictures(p.name, sp);
-      await DB.doc("flowers/" + slug(p.name)).set(Object.assign({}, o, {images: ids}));
+      const clean = Object.assign({}, o, {images: ids});
+      if(leafStale(o)) Object.keys(clean).forEach(k => { if(isLeafKey(k)) delete clean[k]; });   /* drop the leaf settings the reset replaced */
+      await DB.doc("flowers/" + slug(p.name)).set(clean);
       await dropPictures(o.images, ids);
     }catch(e){ break; }
   }
@@ -8163,7 +8428,9 @@ function syncLangButton(){
 if(LANG === "pt"){ trTree(document.body); trTitle(); }
 function syncThemeLabel(){
   const r = resolvedTheme(); root.dataset.resolved = r;
-  document.getElementById("theme-label").textContent = r === "dark" ? "Light" : "Dark";
+  /* both words sit in the label, stacked in one cell, and only the one that applies shows: the button is as wide as the
+     longer word in both themes, so it never changes size */
+  document.getElementById("theme-label").dataset.next = r === "dark" ? "light" : "dark";
   /* the icon follows the label: circle.lefthalf.filled to go dark, circle.righthalf.filled to go light */
   const ic = document.querySelector("#theme > .sf"), k = r === "dark" ? "themeR" : "theme";
   if(ic && ic.dataset.icon !== k) ic.outerHTML = sf(k);
@@ -8233,9 +8500,10 @@ const LEVELS = [
 const SECTIONS = [
   {k:"corolla", label:"Corolla", groups:[
     {t:"Color", colors:["petalCentre","petalMid","petalTip"], grad:{id:"g-petal", stops:["petalStop0","petalStop1"]}, mid:true},
-    {t:"Lobe outline", ks:["petalWidth","roundness","petalInner","petalBulge"]},
-    {t:"Curvature", ks:["tubeDepth","lobeBend","lobeCurl","marginCurl","marginBend"]},
-    {t:"Material", ks:["corollaThick","roughness"], colors:["sheenColor"]},
+    {t:"Throat and underside", ks:["throatAmt","petalBackAmt"], colors:["throat","petalBack"]},
+    {t:"Lobe outline", ks:["petalWidth","roundness","petalInner","petalBulge","petalAcumen","petalFuse"]},
+    {t:"Curvature", ks:["tubeDepth","lobeBend","lobeCurl","marginCurl","marginBend","corollaSwell","corollaTwist"]},
+    {t:"Material", ks:["corollaThick","roughness","papillae"], colors:["sheenColor"]},
     {t:"Hairs", ks:["fuzz","fuzzLength","fuzzDensity","fuzzAngle","fuzzEnd","fuzzWhere"], colors:["fuzzColor"]}]},
   {k:"corona", label:"Corona", groups:[
     {t:"Color", colors:["coronaCentre","coronaTip"], grad:{id:"g-corona", stops:["coronaStop0","coronaStop1"]}},
@@ -8257,6 +8525,7 @@ const SECTIONS = [
   /* the leaves: each part has its own picture in the first preview (see leafVisual), as in the leaf lab */
   {k:"leafOutline", label:"Outline", view:"outline", groups:[
     {t:"Proportions", ks:["leafAspect","leafWidest","leafShoulder"]},
+    {t:"Leaf lab outline", ks:["leafProfile","leafBaseFull","leafTipFull","leafDrip"]},
     {t:"Base", ks:["leafBase","leafCordate"]},
     {t:"Apex", ks:["leafApex","leafTip","leafNotch"]}]},
   {k:"leafForm", label:"Form", view:"form", groups:[
@@ -8268,23 +8537,23 @@ const SECTIONS = [
     {t:"Angle and curve", ks:["veinAngleTop","veinAngle","veinDepart","veinArch","veinArchSmooth"]},
     {t:"Endings", ks:["veinEnd","veinLoop","veinFestoon","veinInter","veinSecWidth"]},
     {t:"Minor veins", ks:["veinTer","veinNet","veinSinuous","veinAreole","veinAreoleAmt","veinFev","veinMinorWidth"]},
-    {t:"Look", ks:["veinWidth","veinMid","veinSec","veinMinor","veinRelief","veinPillow"], colors:["leafVein"]}]},
+    {t:"Look", ks:["veinWidth","veinBend","veinMid","veinSec","veinMinor","veinRelief","veinPillow"], colors:["leafVein"]}]},
   {k:"leafColor", label:"Color and pattern", view:"color", groups:[
     {t:"Blade", ks:["leafMidGlow","leafEdgeDark","leafUneven"], colors:["leafTop","leafUnder"]},
-    {t:"Splash", ks:["leafSplashAmt","leafSplashSize","leafSplashVar","leafSplashCluster","leafSplashBlotch","leafSplashAvoid","leafSplashEdge"], colors:["leafSplash"]},
-    {t:"Mottle", ks:["leafMottle","leafMottleScale","leafMottleSoft"], colors:["leafMottleLight","leafMottleDark"]},
+    {t:"Splash", ks:["leafSplashAmt","leafSplashSize","leafSplashVar","leafSplashCluster","leafSplashBlotch","leafSplashAvoid","leafSplashEdge","leafSplashOpacity"], colors:["leafSplash"]},
+    {t:"Mottle", ks:["leafMottle","leafMottleCover","leafMottleBalance","leafMottleScale","leafMottleSoft"], colors:["leafMottleLight","leafMottleDark"]},
     {t:"Variegation", ks:["leafVarMarginAmt","leafVarCenterAmt","leafVarRagged","leafVarVeins"], colors:["leafVarMargin","leafVarCenter"]},
     {t:"Dark margin", ks:["leafMarginAmt","leafMarginWidth"], colors:["leafMarginColor"]},
     {t:"Sun stress", ks:["leafEdgeAmt","leafEdgeWidth","leafStressPatch","leafStressVeins"], colors:["leafEdge"]},
     {t:"Pattern", ks:["leafSeed"]}]},
   {k:"leafSurface", label:"Surface", view:"surface", groups:[
-    {t:"Texture", ks:["leafRoughness"], colors:["leafSheenColor"]},
+    {t:"Texture", ks:["leafRoughness","leafGrain"], colors:["leafSheenColor"]},
     {t:"Hairs", ks:["leafFuzz","leafFuzzLength"], colors:["leafFuzzColor"]},
     {t:"Light, for every leaf", ks:["leafLightAz","leafLightEl"]}]},
   {k:"leafStem", label:"Stem and nodes", view:"stem", groups:[
     {t:"Petiole", ks:["leafAttach","leafBlade","leafRoll","petioleLength","petioleThick"], colors:["leafPetiole"]},
-    {t:"Nodes", ks:["leafPerNode","leafNodes","leafInternode","leafNodeTurn","stemCurve","stemThick"]},
-    {t:"On the hoya page", ks:["leafViewTurn","leafViewTilt"]}]},
+    {t:"Nodes", ks:["leafPerNode","leafNodes","leafInternode","leafNodeTurn","stemCurve","stemCurveDir","stemThick"]},
+    {t:"On the hoya page", ks:["leafViewTurn","leafViewTilt","leafViewRoll"]}]},
   /* the hoya page's name box: its own view, showing the preview in place of the flower stages */
   {k:"hero", label:"Name box", groups:[
     {t:"Color", colors:["accent"]},
@@ -8507,7 +8776,7 @@ function syncControls(){
     const r = document.getElementById("r-"+k); if(!r) continue;
     r.value = sp[k];
     const F = SPEC_FIELDS[k]; r.style.setProperty("--p", ((sp[k] - F.min) / (F.max - F.min) * 100).toFixed(2) + "%");
-    document.getElementById("o-"+k).textContent = SPEC_FIELDS[k].step >= 1 ? Math.round(sp[k]) + (/Light(Az|El)$|^light(Az|El)$|^leafView|^leafNodeTurn$/.test(k) ? "°" : "") : (+sp[k]).toFixed(2);
+    document.getElementById("o-"+k).textContent = F.names ? trUI(F.names[Math.round(sp[k])] || "") : SPEC_FIELDS[k].step >= 1 ? Math.round(sp[k]) + (/Light(Az|El)$|^light(Az|El)$|^leafView|^leafNodeTurn$/.test(k) ? "°" : "") : (+sp[k]).toFixed(2);
   }
   for(const [k] of COLOR_FIELDS){
     const c = document.getElementById("c-"+k); if(!c) continue;
@@ -8586,7 +8855,7 @@ function drawBuilder(){
     else el.innerHTML = drawSpec(sp, B.plant.name, "Preview of the umbel", false) + `<p class="label stage-title">Umbel</p>`;   /* no 3D: a still, which doesn't turn */
     if(leafMode){ if(B.l3d) B.l3d.leaf(sp, false); if(B.l3d2) B.l3d2.leaf(sp, true);
       /* changing the hoya page's angle turns the Nodes preview there, easing, so you see the picture you'll get */
-      const lv = leafViewOf(sp); if(B.l3d2 && (!B.leafView || lv[0] !== B.leafView[0] || lv[1] !== B.leafView[1])){ B.leafView = lv; B.l3d2.turnTo(...lv); }
+      const lv = leafViewOf(sp); if(B.l3d2 && (!B.leafView || lv[0] !== B.leafView[0] || lv[1] !== B.leafView[1] || lv[2] !== B.leafView[2])){ B.leafView = lv; B.l3d2.turnTo(...lv); }
       leafVisual(sp);
     }
     if(B.f3d){ if(!leafMode && !flowerSame) B.f3d.update(sp); }
@@ -9190,7 +9459,7 @@ const DS_COLORS = [["--bg","Page"],["--tile","Surface"],["--sunk","Recessed fill
 const DS_TYPE = [["--fs-3xl","Display titles in tiles","display",700],["--fs-2xl","Large icons","body",500],["--fs-xl","Small status icons","body",500],["--fs-input","Inputs and selects","body",400],["--fs-lg","Body copy, search icon","body",400],["--fs-base","Body, toast","body",400],["--fs-md","Buttons, segments","body",500],["--fs-sm","Captions, small labels","mono",400],["--fs-xs","Labels, counts","mono",400],["--fs-2xs","Pills, scales","mono",400]];
 const DS_SPACE = ["--space-3xs","--space-2xs","--space-xs","--space-sm","--space-md","--space-lg","--space-xl","--space-2xl","--space-3xl","--space-4xl"];
 const DS_EASE = [["--ease","Hover and color changes"],["--ease-soft","A very soft start and a long, gentle landing"],["--ease-out","Entrances"],["--ease-in-out","Moves and resizes on screen"],["--ease-in","Exits"]];
-const DS_DUR = [["--dur-press","Press"],["--dur-tick","Small swaps"],["--dur-exit","Page exit"],["--dur-quick","Toast, fades"],["--dur-knob","Gradient stops"],["--dur-enter","Page entrance"],["--dur-hover","Hover grow"],["--dur-move","Moves, segment thumb"],["--dur-settle","Icon morphs"],["--dur-fade","Picture fade-in"],["--dur-panel","Builder panels"],["--dur-color","Color changes"],["--dur-flip","Card flip"]];
+const DS_DUR = [["--dur-press","Press"],["--dur-tick","Small swaps"],["--dur-exit","Page exit"],["--dur-quick","Toast, fades"],["--dur-knob","Gradient stops"],["--dur-enter","Page entrance"],["--dur-hover","Press release"],["--dur-move","Moves, segment thumb"],["--dur-settle","Icon morphs"],["--dur-fade","Picture fade-in"],["--dur-panel","Builder panels"],["--dur-color","Color changes"],["--dur-flip","Card flip"]];
 const DS_SHADOW = [["--ring","Hairline ring on tracks and swatches"],["--shadow-thumb","Segment thumb, selected segment"],["--shadow-lift","Open origin and scent cards"],["--shadow-toast","Toast"]];
 function dsSection(title, intro, body){
   return `<div class="tile s12 ds-sec"><h2>${title}</h2>${intro ? `<p class="ds-intro">${intro}</p>` : ""}${body}</div>`;
@@ -9254,14 +9523,14 @@ function renderDesign(){
       <div class="ds-durs">${DS_DUR.map(([v, n]) => `<div><code>${v}</code><span class="ds-val" data-var="${v}"></span><span>${n}</span></div>`).join("")}</div>`)}
 
     ${dsSection("Components", "", `
-      ${dsComp("Button", ".btn · .btn.primary · .v3d-wire", "One button style across the site: glass, a see-through fill over a background blur with a faint ring, 38px tall with a 44px tap area. The primary one is filled with ink (Save), and a toggle (Mesh) fills with ink while on; disabled buttons fade to 40% and don't respond. Hover grows it 5% (mouse only) and press shrinks it to 0.98. A leading icon gets the same space before it as above and below it.",
+      ${dsComp("Button", ".btn · .btn.primary · .v3d-wire", "One button style across the site: glass, a see-through fill over a background blur with a faint ring, 38px tall with a 44px tap area. The primary one is filled with ink (Save), and a toggle (Mesh) fills with ink while on; disabled buttons fade to 40% and don't respond. Hover darkens its ring (black at 16%, white at 20% in dark mode; mouse only) and press shrinks it to 0.985 (0.08s). A leading icon gets the same space before it as above and below it.",
         `<button type="button" class="btn">Reset</button><a class="btn" href="#design" onclick="return false">Open its page</a><button type="button" class="btn" disabled>Undo</button><button type="button" class="btn primary">Save</button><button type="button" class="btn primary" disabled>Save</button>
          <button type="button" class="btn v3d-wire" aria-pressed="false" data-ds-toggle>Mesh</button><button type="button" class="btn v3d-wire" aria-pressed="true" data-ds-toggle>Mesh</button>`)}
       ${dsComp("Icon button", ".btn.icon", "A button with only an icon inside is a circle, 38px across with a 44px tap area, the icon centered. It always has an aria-label naming what it does. Used for the builder's previous and next hoya, and for the header's icon buttons on phones.",
         `<a class="btn icon" href="#design" onclick="return false" aria-label="Previous hoya">${sf("prev")}</a><a class="btn icon" href="#design" onclick="return false" aria-label="Next hoya">${sf("next")}</a><button type="button" class="btn icon" aria-label="Switch color theme">${sf("theme")}</button>`)}
       ${dsComp("In the header", ".btn · .compact · .compact-text", "The header's buttons, shown as they sit on the page. On phones the ones with icons become 38px circles (.compact; .compact-text keeps the words instead of the icon).",
         `<div class="ds-bar">${dsHeaderButtons()}</div>`)}
-      ${dsComp("Plus button", ".oc-btn · .gmid", "The glass circle on the origin and scent cards, 30px across with a 44px tap area. Its plus turns into a close mark when the card is open. The flower builder's add/remove middle color (.gmid) is the same button; its plus folds into a minus once the color is added.",
+      ${dsComp("Plus button", ".oc-btn · .gmid", "The glass circle on the origin and scent cards, 30px across with a 44px tap area, in the buttons' faint ring, which darkens on hover; press shrinks it to 0.98. Its plus turns into a close mark when the card is open. The flower builder's add/remove middle color (.gmid) is the same button; its plus folds into a minus once the color is added.",
         `<div class="ds-oc"><button type="button" class="oc-btn" aria-label="Open"><i></i></button></div><div class="ds-oc ds-oc-open"><button type="button" class="oc-btn" aria-label="Close"><i></i></button></div>`)}
       ${dsComp("Segmented control", ".seg.seg-slide + .seg-thumb · slideSeg()", "Choices shown side by side. Every segmented control works the same way: a thumb sits behind the choice (aria-pressed or aria-selected) and slides to the new one with ease-in-out, stretching 12% along its travel and settling as it lands.",
         `<div class="seg seg-slide" role="group" aria-label="Example filter"><span class="seg-thumb" aria-hidden="true"></span><button type="button" aria-pressed="true">All<span class="ct">84</span></button><button type="button" aria-pressed="false">Alive<span class="ct">73</span></button><button type="button" aria-pressed="false">Lost<span class="ct">11</span></button></div>
@@ -9270,7 +9539,7 @@ function renderDesign(){
         `<label class="search ds-search">${ICON_SEARCH}<input type="search" placeholder="Search names, origins, scents" autocomplete="off" aria-label="Example search"><button type="button" class="search-clear" aria-label="Clear search" tabindex="-1">${icoX}</button></label>`)}
       ${dsComp("Select", ".select > select", "The browser's arrow is replaced by a small chevron of our own. Its fill is the buttons' glass, as is the segmented controls' track. Selects, the search field and segmented controls are all 44px tall (--h-control); the dropdown menu's trigger is the default button's 38px.",
         `<span class="select ds-select"><select aria-label="Example select">${DATA.slice(0, 6).map(x => `<option>${esc(x.name)}</option>`).join("")}</select></span>`)}
-      ${dsComp("Dropdown menu", ".b-name + .b-menu · bindHoyaMenu()", "A choice from a long list (the builder's hoya). The trigger is the default button's size, 38px tall with a 44px tap area, in the buttons' glass and ring, with the chevrons as far from its end as from its top and bottom; it grows 5% on hover and shrinks to 0.98 on press. The list grows out of it (from 0.95, top left, 240ms ease-out) and goes back into it faster (160ms ease-in). It opens on a search field: type to filter, arrow keys to move, Enter to choose, Escape to close. Each row shows the flower, and the current choice is outlined. Corners stay concentric: the menu's radius minus its padding for the rows, the rows' minus theirs for the pictures.",
+      ${dsComp("Dropdown menu", ".b-name + .b-menu · bindHoyaMenu()", "A choice from a long list (the builder's hoya). The trigger is the default button's size, 38px tall with a 44px tap area, in the buttons' glass and ring, with the chevrons as far from its end as from its top and bottom; its ring darkens on hover and it shrinks to 0.985 on press. The list grows out of it (from 0.95, top left, 240ms ease-out) and goes back into it faster (160ms ease-in). It opens on a search field: type to filter, arrow keys to move, Enter to choose, Escape to close. Each row shows the flower, and the current choice is outlined. Corners stay concentric: the menu's radius minus its padding for the rows, the rows' minus theirs for the pictures.",
         `<div class="ds-dd">${hoyaMenu(DATA[0], DATA.slice().sort((a, b) => a.name.localeCompare(b.name)), "ds")}</div>`)}
       ${dsComp("Slider", ".ctl", "A gray track filled in ink up to the thumb. Its label and value sit above it.",
         `<div class="ctl ds-ctl"><div class="ctl-top"><label for="ds-range">Lobe width</label><output id="ds-range-o" for="ds-range">0.42</output></div><input type="range" id="ds-range" min="0" max="1" step=".01" value=".42" style="--p:42%"></div>`)}

@@ -17,7 +17,8 @@ The site is built from the **Hoya Collection** artifact, without the flower buil
    `python3 _build/bake_shadows.py <scratch> <scratch>`, then run `pngquant --speed 1 --strip --force --ext .png <scratch>/*-shade.png`.
    Replace `renders/` with the scratch folder's contents.
 6. Build the page:
-   `python3 _build/build.py _build/artifact-index.html _build/flowers.json index.html renders`
+   `python3 _build/build.py <traced.html> _build/flowers.json index.html renders [--keep-builder]`
+   With `--keep-builder` the flower builder stays (with its 3D renderer), and the artifact's `photos/` must be in the repo root for its photo reference. With no database on the live site it can't save; the builder says so itself. Without it, the builder is cut and `photos/` can be removed.
 
 `build.py` does the following:
 - reads every picture from `renders/`, with a version made from the pictures themselves, so browsers never keep a stale copy;
