@@ -44,6 +44,7 @@
   --r:21.6px; --gap:6px;
   --tb:#000000; --tm:46%;   /* titles: a very dark version of the flower color (mixed in OKLCH) */
   --ease:cubic-bezier(.22,.61,.36,1);   /* hover and color (theme) changes */
+  --ease-soft:cubic-bezier(.54,.09,.2,1);   /* starts almost flat, picks up through the middle, and settles in a long, gentle landing */
   --ease-out:cubic-bezier(.23, 1, .32, 1);      /* entrances */
   --ease-in-out:cubic-bezier(.77, 0, .175, 1);  /* things already on screen that move or resize */
   --ease-in:cubic-bezier(.55, 0, 1, .45);       /* exits */
@@ -64,6 +65,7 @@
   --dur-move:.3s; --dur-settle:.35s; --dur-fade:.4s; --dur-panel:.42s; --dur-color:.45s; --dur-flip:.5s;
   /* elevation and edges */
   --ring:inset 0 0 0 1px rgba(0,0,0,.08);
+  --ring-ctl:rgb(0 0 0 / .05);   /* the faint outline of buttons, segmented controls, dropdowns and the search field (white at 7% in dark mode) */
   --shadow-thumb:0 1px 3px rgba(0,0,0,.12);
   --shadow-lift:0 20px 50px rgba(0,0,0,.12), 0 3px 10px rgba(0,0,0,.05);
   --shadow-toast:0 10px 30px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.08);
@@ -75,13 +77,13 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#000000; --tile:#121212; --ink:#FFFFFF; --muted:#8F8F8F; --line:#2B2B2B; --signal:#FF6630; --sunk:#1C1C1C; --husk:#5E5852;
-    --tb:#FFFFFF; --tm:18%;
+    --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#000000; --tile:#121212; --ink:#FFFFFF; --muted:#8F8F8F; --line:#2B2B2B; --signal:#FF6630; --sunk:#1C1C1C; --husk:#5E5852;
-  --tb:#FFFFFF; --tm:18%;
+  --tb:#FFFFFF; --tm:18%; --ring-ctl:rgb(255 255 255 / .07);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -106,17 +108,17 @@ body[data-page="build"] :is(#design-link, #lang, #builder-link){display:none}   
    hover grows it 5% (mouse only), press shrinks it to 0.98. .primary fills it with ink; a pressed toggle does too */
 .btn{--btn-h:var(--h-control-sm);
   font:500 var(--fs-md)/1 var(--body); font-feature-settings:var(--inter); color:color-mix(in oklch, var(--hue, var(--ink)) var(--tm), var(--tb));
-  background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px rgb(0 0 0 / .08);
+  background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px var(--ring-ctl);
   border-radius:var(--r-pill); height:var(--btn-h); box-sizing:border-box; padding:0 14px; white-space:nowrap; cursor:pointer; position:relative;
   text-decoration:none; display:inline-flex; align-items:center; gap:var(--space-sm);
   transition:background-color var(--dur-move) var(--ease), color var(--dur-color) var(--ease), transform var(--dur-hover) var(--ease), box-shadow var(--dur-color) var(--ease), opacity var(--dur-move) var(--ease)}
 .btn::after{content:""; position:absolute; inset:-3px 0}   /* a 44px tall tap area */
-:root[data-theme="dark"] :is(.btn, .seg, select, .b-name){box-shadow:0 0 0 1px rgb(255 255 255 / .1)}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) :is(.btn, .seg, select, .b-name){box-shadow:0 0 0 1px rgb(255 255 255 / .1)} }
+:root[data-theme="dark"] :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-ctl)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) :is(.btn, .seg, select, .b-name, .search){box-shadow:0 0 0 1px var(--ring-ctl)} }
 :root[data-theme="dark"] .b-pane{border-color:rgb(255 255 255 / .1)}   /* the previews' outline: black at 10% in light mode, white at 10% in dark */
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .b-pane{border-color:rgb(255 255 255 / .1)} }
-/* segmented controls and dropdowns share the button's glass and its faint ring */
-.seg, .b-name{box-shadow:0 0 0 1px rgb(0 0 0 / .08)}
+/* segmented controls, dropdowns and the search field share the button's faint ring */
+.seg, .b-name, .search{box-shadow:0 0 0 1px var(--ring-ctl)}
 @media (hover:hover) and (pointer:fine){ .btn:hover:not(:disabled){transform:scale(1.05)} }
 .btn:active:not(:disabled){transform:scale(.98); transition-duration:var(--dur-move), var(--dur-color), var(--dur-press), var(--dur-color), var(--dur-move)}
 .btn:focus-visible,.tile-link:focus-visible,input:focus-visible,.seg button:focus-visible{outline:2px solid var(--signal); outline-offset:2px}
@@ -201,12 +203,14 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 /* hovering grows a tile very slightly rather than moving it, so it never slides out from under the cursor and flickers */
 .tile-link{text-decoration:none; display:flex; flex-direction:column; gap:var(--space-xl); min-height:220px; cursor:pointer; will-change:transform; -webkit-backface-visibility:hidden; backface-visibility:hidden}
 @media (hover:hover) and (pointer:fine){ .tile-link:hover{transform:scale(1.015); background:var(--c, var(--ink)); color:var(--on, var(--tile))} }
-@media (hover:hover) and (pointer:fine){ .tile-link:hover .origin-mini,.tile-link:hover .pill,.tile-link:hover .label{color:inherit} }
-@media (hover:hover) and (pointer:fine){ .tile-link:hover .segs i{background:currentColor; opacity:.25} }
+/* on hover every part of the card goes straight to the card's hover text color (not "inherit", which would chase the
+   card's own color as it eases and arrive late), over the same time and curve as the background */
+@media (hover:hover) and (pointer:fine){ .tile-link:hover .origin-mini,.tile-link:hover .pill,.tile-link:hover .label{color:var(--on, var(--tile))} }
+@media (hover:hover) and (pointer:fine){ .tile-link:hover .segs i{background:var(--on, var(--tile)); opacity:.25} }
 @media (hover:hover) and (pointer:fine){ .tile-link:hover .segs i.on{opacity:1} }
 @media (hover:hover) and (pointer:fine){ .tile-link:hover .art{filter:brightness(1.5) saturate(.85); opacity:1} }
-.tile-link .art{width:72px; height:72px; transition:filter var(--dur-settle) var(--ease), opacity var(--dur-settle) var(--ease)}
-.swatch{width:100%; height:6px; border-radius:var(--r-pill); box-shadow:var(--ring); background:var(--c, var(--line)); transition:background-color var(--dur-color) var(--ease), opacity var(--dur-move) var(--ease)}
+.tile-link .art{width:72px; height:72px; transition:filter var(--dur-color) var(--ease), opacity var(--dur-color) var(--ease)}
+.swatch{width:100%; height:6px; border-radius:var(--r-pill); box-shadow:var(--ring); background:var(--c, var(--line)); transition:background-color var(--dur-color) var(--ease), opacity var(--dur-color) var(--ease)}
 @media (hover:hover) and (pointer:fine){ .tile-link:hover .swatch{opacity:0} }
 .tile-link h3{font-family:var(--display); font-weight:700; font-size:var(--fs-3xl); line-height:1.02; margin:0; letter-spacing:-.005em; overflow-wrap:normal; word-break:keep-all}
 .tile-link .meta{margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; gap:var(--space-sm)}
@@ -223,9 +227,9 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .tile-link .pill.status .sf{font-size:var(--fs-xl)}
 .tile-link .pill.alive{color:color-mix(in oklch, var(--hue) var(--tm), var(--tb))}
 .tile-link .pill.dead, .tile-link .origin-mini{color:color-mix(in oklch, var(--hue) 45%, var(--muted))}
-@media (hover:hover) and (pointer:fine){ .tile-link:hover .pill.status{color:inherit} }
+@media (hover:hover) and (pointer:fine){ .tile-link:hover .pill.status{color:var(--on, var(--tile))} }
 .segs{display:flex; gap:3px}
-.segs i{width:10px; height:4px; border-radius:2px; background:var(--line); transition:background-color var(--dur-color) var(--ease), opacity var(--dur-move) var(--ease)}
+.segs i{width:10px; height:4px; border-radius:2px; background:var(--line); transition:background-color var(--dur-color) var(--ease), opacity var(--dur-color) var(--ease)}
 .segs i.on{background:var(--ink)}
 .is-dead{background:var(--sunk)}
 .is-dead .art{filter:grayscale(1); opacity:.6}
@@ -249,6 +253,8 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .nu-sh{position:absolute; inset:0; width:100%; height:100%; filter:url(#nu-shadow); -webkit-filter:url(#nu-shadow); translate:1.5% 20%; scale:.8}   /* shape, blur, strength and grain all in the SVG filter (see body); the offset is in translate, since the fade-in animates opacity and transform */
 .nu-mul{mix-blend-mode:multiply}
 .nu-ovl{mix-blend-mode:overlay}
+.hero h1, .name-tile h1{opacity:0; transition:opacity var(--dur-fade) var(--ease-out)}   /* shown once its font has loaded and it fits (fitType) */
+.hero h1.fit, .name-tile h1.fit{opacity:1}
 .name-tile h1{
   font-family:var(--display); font-weight:700; font-size:clamp(64px,12vw,168px);
   line-height:.85; letter-spacing:-.015em; margin:0; overflow-wrap:normal; word-break:keep-all; text-wrap:balance;
@@ -432,15 +438,18 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .globe-pin{position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none;
   -webkit-mask-image:radial-gradient(ellipse 80% 133% at 50% 159%, transparent 64%, rgba(0,0,0,.08) 69%, rgba(0,0,0,.22) 74%, rgba(0,0,0,.42) 79%, rgba(0,0,0,.64) 84%, rgba(0,0,0,.84) 89%, rgba(0,0,0,.96) 94%, #000 98%), linear-gradient(#000 25%, rgba(0,0,0,.9) 35%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.45) 55%, rgba(0,0,0,.22) 65%, rgba(0,0,0,.07) 75%, transparent 85%); mask-image:radial-gradient(ellipse 80% 133% at 50% 159%, transparent 64%, rgba(0,0,0,.08) 69%, rgba(0,0,0,.22) 74%, rgba(0,0,0,.42) 79%, rgba(0,0,0,.64) 84%, rgba(0,0,0,.84) 89%, rgba(0,0,0,.96) 94%, #000 98%), linear-gradient(#000 25%, rgba(0,0,0,.9) 35%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.45) 55%, rgba(0,0,0,.22) 65%, rgba(0,0,0,.07) 75%, transparent 85%);
   -webkit-mask-composite:source-in; mask-composite:intersect}   /* like the reference: the globe shows along its curved top edge, fading toward its middle and, lower down, toward the sides too */
+.globe-full.spinning :is(.g-shade, .g-hilite, .g-edge){display:none}   /* drawn by the still copy over it while it turns (spinGlobe) */
+.globe-hold{position:relative; flex:none}
+.oc-back .globe-hold > .globe-ov{position:absolute; top:0; left:0; width:100%; height:auto; aspect-ratio:1; margin:0; transform:none; pointer-events:none}
 .oc-back .globe-full{display:block; width:100%; height:auto; aspect-ratio:1; margin:0 0 14px; flex:none}   /* as wide as the card; the close button sits in the corner beside its curve */
 .globe .g-sea{fill:color-mix(in oklch, var(--ink) 3%, transparent)}
 :root[data-theme="dark"] .globe .g-sea{fill:color-mix(in oklch, var(--ink) 10%, transparent)}   /* dark mode: the globe a step lighter than the card, so its shading reads */
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .globe .g-sea{fill:color-mix(in oklch, var(--ink) 10%, transparent)} }
-.globe .g-shade{opacity:.12} .globe .g-hilite{opacity:0} .globe .g-edge{opacity:.14}
+.globe .g-shade{opacity:.18} .globe .g-hilite{opacity:0} .globe .g-edge{opacity:.14}
 :root[data-theme="dark"] .globe .g-edge{opacity:.4}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .globe .g-edge{opacity:.4} }
-:root[data-theme="dark"] .globe .g-shade{opacity:.55} :root[data-theme="dark"] .globe .g-hilite{opacity:.14}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .globe .g-shade{opacity:.55} :root:not([data-theme="light"]) .globe .g-hilite{opacity:.14} }
+:root[data-theme="dark"] .globe .g-shade{opacity:.65} :root[data-theme="dark"] .globe .g-hilite{opacity:.14}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .globe .g-shade{opacity:.65} :root:not([data-theme="light"]) .globe .g-hilite{opacity:.14} }
 .globe .g-land{fill:var(--muted); opacity:.24}   /* plain gray: only the places take the flower color */
 :root[data-theme="dark"] .globe .g-land{opacity:.42}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .globe .g-land{opacity:.42} }
@@ -482,7 +491,7 @@ span.sf{height:auto; vertical-align:baseline; line-height:1; font-family:"SF Pro
 .select{position:relative; display:inline-flex; align-items:center}
 .select::after{content:""; position:absolute; right:17px; top:50%; width:6px; height:6px; margin-top:-5px; border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor;
   transform:rotate(45deg); pointer-events:none; color:var(--muted); transition:color var(--dur-color) var(--ease)}
-select{-webkit-appearance:none; appearance:none; box-sizing:border-box; height:var(--h-control);   /* dropdowns, the search field and segmented controls share one height: --h-control, 44px */ font:500 var(--fs-input) var(--body); font-feature-settings:var(--inter); color:var(--ink); background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px rgb(0 0 0 / .08); border-radius:var(--r-pill); padding:0 40px 0 16px; cursor:pointer; transition:background-color var(--dur-color) var(--ease), color var(--dur-color) var(--ease), border-color var(--dur-color) var(--ease)}
+select{-webkit-appearance:none; appearance:none; box-sizing:border-box; height:var(--h-control);   /* dropdowns, the search field and segmented controls share one height: --h-control, 44px */ font:500 var(--fs-input) var(--body); font-feature-settings:var(--inter); color:var(--ink); background:var(--glass-bg); -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); border:0; box-shadow:0 0 0 1px var(--ring-ctl); border-radius:var(--r-pill); padding:0 40px 0 16px; cursor:pointer; transition:background-color var(--dur-color) var(--ease), color var(--dur-color) var(--ease), border-color var(--dur-color) var(--ease)}
 .b-stage .art{width:min(86%,440px); height:auto; aspect-ratio:1}
 .b-single .art{width:min(80%,240px)}
 canvas.art3d, img.art3d{display:block}
@@ -599,7 +608,7 @@ img.bloom-canvas{object-fit:contain}
 .builder[data-sub="leafStem"] .b-nodes{order:-1}   /* the nodes are this part's own view */
 .b-hero{padding:20px; min-height:0; background:var(--name-bg, var(--acc)); display:flex; align-items:flex-start; justify-content:flex-end}
 .b-hero > .stage-title{position:absolute}
-.b-hero h1{font-size:clamp(40px, 7vw, 112px)}
+.b-hero h1{font-size:clamp(40px, 7vw, 112px); align-self:stretch}   /* as wide as the box, so a long name is fitted (fitType) rather than cut off */
 .b-photo{background:var(--sunk)}
 /* the leaf's own view: a flat drawing for most parts, a 3D close-up for the surface */
 .b-lview canvas.lv-2d{cursor:default; touch-action:auto}
@@ -614,7 +623,7 @@ img.bloom-canvas{object-fit:contain}
   .b-vis, .builder.mode-leaf .b-vis, .builder.mode-leaf[data-sub="leafStem"] .b-vis, .builder.mode-hero .b-vis{display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain}
   .b-vis::-webkit-scrollbar{display:none}
   .b-pane{flex:0 0 82%; scroll-snap-align:start}
-  .b-pane:last-child{flex-basis:100%}
+  .b-pane:last-child, .builder.mode-hero .b-hero{flex-basis:100%}
   .b-levels{flex-direction:column; align-items:stretch; gap:var(--space-sm)}
   .b-levels .seg-slide, .b-subs > .seg{max-width:100%; scrollbar-width:none}
   .b-levels .seg-slide::-webkit-scrollbar{display:none}
@@ -756,8 +765,8 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 .btn:disabled{opacity:.4; cursor:default; transform:none}
 
 /* view transition */
-#view{transition:opacity var(--dur-enter) var(--ease-out), transform var(--dur-enter) var(--ease-out)}
-#view.leaving{opacity:0; transform:translateY(8px); transition-duration:var(--dur-exit); transition-timing-function:var(--ease-in)}   /* the exit is shorter and quieter than the entrance */
+#view{transition:opacity var(--dur-enter) var(--ease-out)}   /* pages only fade; nothing moves */
+#view.leaving{opacity:0; transition-duration:var(--dur-exit); transition-timing-function:var(--ease-in)}   /* the exit is shorter than the entrance */
 
 @media (max-width:900px){
   .s3{grid-column:span 6} .s9{grid-column:span 6} .s4,.s5,.s8{grid-column:span 12} .s6{grid-column:span 12}
@@ -850,7 +859,7 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 .tile-link{--hue:var(--c, var(--ink))}
 .tile-link h3, .pager .nm, .notes h2, .word, .b-title, .num.range, .stat-unit, .b-status:not([data-state="dirty"]){
   color:color-mix(in oklch, var(--hue) var(--tm), var(--tb)); transition:color var(--dur-color) var(--ease)}
-@media (hover:hover) and (pointer:fine){ .tile-link:hover h3, .tile-link:hover .nm{color:inherit} }
+@media (hover:hover) and (pointer:fine){ .tile-link:hover h3, .tile-link:hover .nm{color:var(--on, var(--tile))} }
 .stat-unit{opacity:.55}   /* the unit takes the title tint too, but quieter than the numbers */
 .word.none{color:color-mix(in oklch, var(--hue) 45%, var(--muted))}   /* "No data": muted, but tinted with the flower color */
 
@@ -933,7 +942,7 @@ input.pk-range:focus-visible{outline:2px solid var(--ink); outline-offset:3px}
 .ds-shadows{display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:var(--space-3xl) var(--space-lg)}
 .ds-shadows i{display:block; height:80px; border-radius:calc(var(--r) * .6); background:var(--tile); margin-bottom:var(--space-md); transition:background-color var(--dur-color) var(--ease)}
 .ds-shadows > div{padding:var(--space-lg); background:var(--sunk); border-radius:var(--r); transition:background-color var(--dur-color) var(--ease)}
-.ds-glass{background:var(--glass-bg) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); box-shadow:0 0 0 1px rgb(0 0 0 / .08)}
+.ds-glass{background:var(--glass-bg) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur); box-shadow:0 0 0 1px var(--ring-ctl)}
 .ds-shadows > div:last-child{background:linear-gradient(135deg, var(--signal), var(--pin))}
 .ds-shadows > div:last-child code, .ds-shadows > div:last-child span{color:#fff}
 .ds-eases{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:var(--space-lg)}
@@ -7370,10 +7379,27 @@ document.addEventListener("animationend", e => {
   else if(e.animationName === "artIn" && e.target.classList.contains("art-in")) e.target.classList.remove("art-in");
 }, true);
 function revealPic(el){
+  if(el.closest("[data-gate]")) return;   /* on a hoya page the pictures wait for each other (gatePictures) */
   const go = () => requestAnimationFrame(() => el.classList.add("on"));
   if(el.decode) el.decode().then(go, go); else go();
 }
 document.addEventListener("load", e => { const el = e.target; if(el.classList && el.classList.contains("art-png")){ revealPic(el); const src = el.dataset.src; keepPicture(src); } }, true);
+/* a hoya page's pictures (the umbel, the flower, the leaves) fade in together, once every one of them has loaded and
+   decoded, rather than each as it arrives. One that can't load doesn't hold the others back; after 10 seconds they show
+   whatever is ready */
+let gateRun = 0;
+function gatePictures(root){
+  const imgs = [...root.querySelectorAll("img.art-png")]; if(!imgs.length) return;
+  const run = ++gateRun; root.dataset.gate = run;
+  const ready = img => new Promise(res => {
+    const dec = () => (img.decode ? img.decode() : Promise.resolve()).then(res, res);
+    if(img.complete) return img.naturalWidth ? dec() : res();
+    img.addEventListener("load", dec, {once: true}); img.addEventListener("error", res, {once: true});
+  });
+  const open = () => { if(root.dataset.gate !== String(run)) return; delete root.dataset.gate;
+    requestAnimationFrame(() => imgs.forEach(img => { if(img.isConnected && img.complete && img.naturalWidth) img.classList.add("on"); })); };
+  Promise.race([Promise.all(imgs.map(ready)), new Promise(r => setTimeout(r, 10000))]).then(open);
+}
 /* when saved designs change, only the pictures (and tile colors) of the plants that changed are swapped, in place: the
    new picture is loaded first, so the old one stays until it can be replaced, and nothing else on the page is redrawn */
 function swapPictures(names){
@@ -9039,18 +9065,45 @@ function bezier(x1, y1, x2, y2){
   const f = (a, b, t) => 3*a*(1 - t)*(1 - t)*t + 3*b*(1 - t)*t*t + t*t*t;
   return x => { if(x <= 0 || x >= 1) return x; let lo = 0, hi = 1, t = x; for(let i = 0; i < 24; i++){ t = (lo + hi)/2; if(f(x1, x2, t) < x) lo = t; else hi = t; } return f(y1, y2, t); };
 }
-/* opening the origin card turns the whole globe a little, west to east, and lets it come to rest with the places facing forward */
-function spinGlobe(svg){
+/* opening the origin card turns the whole globe a little, west to east, and lets it come to rest with the places facing
+   forward. While the card flips the globe holds still at its starting angle; once the flip has finished it starts turning
+   at full speed and slows to a stop (ease-out), fading in as it starts */
+function spinGlobe(svg, delay){
   if(!svg || !svg.dataset.g || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const {geo, lat0, lon0, id} = JSON.parse(svg.dataset.g), from = lon0 - 38, T = 2000, t0 = performance.now() - 500;   /* already a quarter of the way in as the card starts to flip, so it is at full speed (mid ease) when the card has opened */
-  const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;   /* eases in and out: it gathers speed gently and settles just as gently, no jolt at either end */
-  cancelAnimationFrame(svg._spin);
+  const {geo, lat0, lon0, id} = JSON.parse(svg.dataset.g), from = lon0 - 38, T = 1600;
+  const ease = x => 1 - Math.pow(1 - x, 3);   /* full speed at the start, settling gently */
+  cancelAnimationFrame(svg._spin); clearTimeout(svg._wait);
   /* while it turns, only what moves is redrawn in place (the land, the lit places and their glows), at a slightly coarser
      precision; the gradients, shading and outline stay as they are. The last frame is drawn in full, at full precision */
-  const frame = now => { const k = Math.max(0, Math.min(1, (now - t0)/T)), la = lat0 + 4*(1 - ease(k)), lo = from + (lon0 - from)*ease(k);
-    if(k >= 1 || !globeTurn(svg, geo, id, la, lo)) svg.innerHTML = globeView(geo, true, id, la, lo);
-    if(k < 1) svg._spin = requestAnimationFrame(frame); };
-  frame(performance.now());
+  const at = k => { const la = lat0 + 4*(1 - ease(k)), lo = from + (lon0 - from)*ease(k);
+    if(k >= 1 || !globeTurn(svg, geo, id, la, lo)) svg.innerHTML = globeView(geo, true, id, la, lo); };
+  at(0);   /* the starting angle, hidden while the card flips */
+  /* the ball's shading (its shade, highlight and dark rim) doesn't move, so while the globe turns it sits on a copy of the
+     drawing laid exactly over it and left alone: only the land beneath is redrawn each frame, and the shading never
+     flickers with it. The copy goes once the globe has stopped */
+  unhold(svg);
+  svg.style.transition = "none"; svg.style.opacity = "0";
+  svg._wait = setTimeout(() => {
+    const ov = svg.cloneNode(true); ov.removeAttribute("data-g"); ov.classList.add("globe-ov");
+    ov.querySelectorAll(":scope > :not(defs):not(.g-shade):not(.g-hilite):not(.g-edge)").forEach(x => x.remove());
+    ov.querySelectorAll("[id]").forEach(x => x.id = x.id + "-ov");
+    ov.querySelectorAll("[fill^='url(#']").forEach(x => x.setAttribute("fill", x.getAttribute("fill").replace(/\)$/, "-ov)")));
+    /* the copy sits in a holder around the globe for the length of the turn, laid at its top left at its exact size */
+    const hold = document.createElement("div"); hold.className = "globe-hold"; svg.before(hold); hold.append(svg, ov);
+    svg._ov = hold; svg.classList.add("spinning");
+    ov.style.opacity = "0"; svg.getBoundingClientRect();   /* both start hidden in their new place (moving the globe into the holder resets its style, so it's read once here), and the fade below runs from there */
+    /* it fades in as it starts to turn */
+    [svg, ov].forEach(x => { x.style.transition = "opacity .6s var(--ease-soft)"; x.style.opacity = "1"; });
+    const t0 = performance.now();
+    const frame = now => { const k = Math.max(0, Math.min(1, (now - t0)/T)); at(k);
+      if(k < 1) svg._spin = requestAnimationFrame(frame); else unhold(svg); };
+    svg._spin = requestAnimationFrame(frame);
+  }, delay || 0);
+}
+/* the turn is over (or the card closed): the globe leaves its holder and draws its own shading again */
+function unhold(svg){
+  const hold = svg._ov; svg.classList.remove("spinning"); svg._ov = null;
+  if(hold && hold.isConnected){ hold.before(svg); hold.remove(); }
 }
 /* one frame of the whole globe turning: the same drawing as globeView's full globe, updating the existing elements.
    Returns false when the drawing isn't there yet (the first frame), so it is drawn in full instead */
@@ -9064,9 +9117,14 @@ function globeTurn(svg, geo, id, lat0, lon0){
   let lit = svg.querySelector(".g-lit");
   if(shown.length && !lit) return false;
   if(lit) lit.setAttribute("d", shown.length ? d : "");
-  clip.innerHTML = shown.map(({g}) => `<path d="${path(d3.geoCircle().center([g.lon, g.lat]).radius(g.r*1.15)())}"/>`).join("");
-  svg.querySelectorAll(".g-glow").forEach(c => c.remove());
-  sea.insertAdjacentHTML("afterend", shown.map(({g, p}) => `<circle class="g-glow" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${Math.max(5, R*Math.sin(g.r*D)*1.1).toFixed(1)}" fill="url(#${id}-gl)"/>`).join(""));
+  /* the lit areas and their glows are updated in place (never removed and added back), so nothing blinks between frames */
+  const NS = "http://www.w3.org/2000/svg", cps = [...clip.children], glows = [...svg.querySelectorAll(".g-glow")];
+  shown.forEach(({g, p}, i) => {
+    let c = cps[i]; if(!c){ c = document.createElementNS(NS, "path"); clip.appendChild(c); } c.setAttribute("d", path(d3.geoCircle().center([g.lon, g.lat]).radius(g.r*1.15)()) || "");
+    let o = glows[i]; if(!o){ o = document.createElementNS(NS, "circle"); o.setAttribute("class", "g-glow"); o.setAttribute("fill", `url(#${id}-gl)`); (glows[i - 1] || sea).after(o); }
+    o.setAttribute("cx", p[0].toFixed(1)); o.setAttribute("cy", p[1].toFixed(1)); o.setAttribute("r", Math.max(5, R*Math.sin(g.r*D)*1.1).toFixed(1));
+  });
+  cps.slice(shown.length).forEach(c => c.remove()); glows.slice(shown.length).forEach(c => c.remove());
   return true;
 }
 function originToggle(tile, open){
@@ -9080,7 +9138,8 @@ function originToggle(tile, open){
     oc.style.setProperty("--oc-h", Math.max(h0, need) + "px"); }
   else { oc.style.setProperty("--oc-h", h0 + "px"); oc.addEventListener("transitionend", function done(e){ if(e.propertyName !== "height") return; oc.removeEventListener("transitionend", done); if(!tile.classList.contains("open")) oc.style.removeProperty("--oc-h"); }); }
   tile.classList.toggle("open", open);
-  if(open) spinGlobe(back.querySelector(".globe-full"));
+  if(open) spinGlobe(back.querySelector(".globe-full"), parseFloat(getComputedStyle(tile).getPropertyValue("--oc-in")) * 1000 || 500);   /* after the flip */
+  else { const g = back.querySelector(".globe-full"); if(g){ cancelAnimationFrame(g._spin); clearTimeout(g._wait); unhold(g); g.style.opacity = "1"; } }
   waveScent(back.querySelector(".sr-back"), open);
   const [fb, bb] = tile.querySelectorAll(".oc-btn");
   fb.setAttribute("aria-expanded", open); fb.tabIndex = open ? -1 : 0; bb.tabIndex = open ? 0 : -1;
@@ -9130,7 +9189,7 @@ function mountLeaves(p){
 const DS_COLORS = [["--bg","Page"],["--tile","Surface"],["--sunk","Recessed fill"],["--ink","Text"],["--muted","Secondary text"],["--line","Hairline"],["--signal","Accent"],["--husk","Soil"],["--pin","Pin"]];
 const DS_TYPE = [["--fs-3xl","Display titles in tiles","display",700],["--fs-2xl","Large icons","body",500],["--fs-xl","Small status icons","body",500],["--fs-input","Inputs and selects","body",400],["--fs-lg","Body copy, search icon","body",400],["--fs-base","Body, toast","body",400],["--fs-md","Buttons, segments","body",500],["--fs-sm","Captions, small labels","mono",400],["--fs-xs","Labels, counts","mono",400],["--fs-2xs","Pills, scales","mono",400]];
 const DS_SPACE = ["--space-3xs","--space-2xs","--space-xs","--space-sm","--space-md","--space-lg","--space-xl","--space-2xl","--space-3xl","--space-4xl"];
-const DS_EASE = [["--ease","Hover and color changes"],["--ease-out","Entrances"],["--ease-in-out","Moves and resizes on screen"],["--ease-in","Exits"]];
+const DS_EASE = [["--ease","Hover and color changes"],["--ease-soft","A very soft start and a long, gentle landing"],["--ease-out","Entrances"],["--ease-in-out","Moves and resizes on screen"],["--ease-in","Exits"]];
 const DS_DUR = [["--dur-press","Press"],["--dur-tick","Small swaps"],["--dur-exit","Page exit"],["--dur-quick","Toast, fades"],["--dur-knob","Gradient stops"],["--dur-enter","Page entrance"],["--dur-hover","Hover grow"],["--dur-move","Moves, segment thumb"],["--dur-settle","Icon morphs"],["--dur-fade","Picture fade-in"],["--dur-panel","Builder panels"],["--dur-color","Color changes"],["--dur-flip","Card flip"]];
 const DS_SHADOW = [["--ring","Hairline ring on tracks and swatches"],["--shadow-thumb","Segment thumb, selected segment"],["--shadow-lift","Open origin and scent cards"],["--shadow-toast","Toast"]];
 function dsSection(title, intro, body){
@@ -9267,9 +9326,10 @@ function route(instant){
   const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);
   requestAnimationFrame(fitType); setTimeout(fitType, 300);   /* refit the big type once the page has drawn */
   const draw = () => {
+    delete view.dataset.gate; gateRun++;   /* a page left before its pictures were ready doesn't hold the next one's */
     if(id === "design"){ B.plant = null; view.innerHTML = renderDesign(); bindDesign(); document.title = "Design system · Hoya Collection"; }
     else if(id === "build" || id.startsWith("build-")){ const bp = builderPlant(id); view.innerHTML = renderBuilder(bp); bindBuilder(bp); document.title = "Flower builder · " + bp.name; }
-    else if(p){ B.plant = null; view.innerHTML = renderPlant(p); fitSoil(); fitLightArc(); mountBloom(p); mountLeaves(p); document.title = "Hoya " + p.name;
+    else if(p){ B.plant = null; view.innerHTML = renderPlant(p); fitSoil(); fitLightArc(); mountBloom(p); mountLeaves(p); gatePictures(view); document.title = "Hoya " + p.name;
       idle().then(() => { const b = view.querySelector(".sr-back"), sc = scent(p); if(b && sc) scentPicture(b, p, sc, "translateY(-22.00%) scale(2.500)"); }); }   /* the open scent card's picture, drawn before it's needed */
     else { B.plant = null; CARDS.clear(); view.innerHTML = renderHome(); bindHome(); document.title = "Hoya Collection"; }
     document.body.dataset.page = id === "design" ? "design" : (id === "build" || id.startsWith("build-")) ? "build" : p ? "plant" : "home";
@@ -9277,6 +9337,7 @@ function route(instant){
     /* on a hoya's page the Flower builder button opens that hoya's flower */
     document.getElementById("builder-link").setAttribute("href", p ? "#build-" + slug(p.name) : "#build");
     hydrateUmbels();   /* after the new page is in place, so its umbels are found */
+    fitType();   /* sized (and, once the font is in, shown) as the page goes in */
   };
   if(first || instant){ draw(); first = false; return; }
   view.classList.add("leaving");
@@ -9284,13 +9345,22 @@ function route(instant){
   setTimeout(() => { draw(); window.scrollTo(0,0); requestAnimationFrame(() => view.classList.remove("leaving")); }, 130);   /* swapped while the old page is all but faded, so the new one starts at once */
 }
 /* shrink big type until its longest word fits, so names never break mid-word */
+/* the big titles (the home page's and each hoya's name card) stay hidden until the display font has loaded and they've
+   been sized to fit, then fade in, so they never show in the fallback font or jump to their size. After 3 seconds they
+   show regardless */
+let displayReady = false;
 function fitType(){
   document.querySelectorAll(".hero h1, .name-tile h1, .tile-link h3, .pager .nm").forEach(el => {
     el.style.fontSize = "";
     let size = parseFloat(getComputedStyle(el).fontSize), guard = 0;
     while(el.scrollWidth > el.clientWidth + 1 && size > 14 && guard++ < 60){ size -= 2; el.style.fontSize = size + "px"; }
   });
+  if(displayReady) document.querySelectorAll(".hero h1:not(.fit), .name-tile h1:not(.fit)").forEach(el => el.classList.add("fit"));
 }
+Promise.race([
+  document.fonts && document.fonts.load ? document.fonts.load('700 100px "Clash Grotesk"').catch(() => {}) : Promise.resolve(),
+  new Promise(r => setTimeout(r, 3000))
+]).then(() => { displayReady = true; fitType(); });
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(fitType);
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { fitType(); moveSegThumb(true); layoutFields(); }, 120); });
 window.addEventListener("hashchange", () => route(false));
