@@ -90,8 +90,14 @@ if not KEEP_BUILDER:
 # 3b. no design system page: its styles, header button, code and route go; #design opens the home page
 cut("/* ===== design system page (#design) ===== */", "</style>")
 drop_line('id="design-link"')
-if KEEP_BUILDER: sub('body[data-page="build"] :is(#design-link, #lang, #builder-link)', 'body[data-page="build"] :is(#lang, #builder-link)')
-else: drop_line('body[data-page="build"] :is(#design-link, #lang, #builder-link)')   # the builder's header rule
+if 'body[data-page="build"] :is(#design-link, #lang, #builder-link)' in h:   # older header: buttons hidden on the builder page
+    if KEEP_BUILDER: sub('body[data-page="build"] :is(#design-link, #lang, #builder-link)', 'body[data-page="build"] :is(#lang, #builder-link)')
+    else: drop_line('body[data-page="build"] :is(#design-link, #lang, #builder-link)')
+if 'id="tools"' in h:   # the header's Explore menu (design system, flower builder)
+    if KEEP_BUILDER:   # only the flower builder is left in it
+        sub('aria-label="Design system and flower builder" title="Design system and flower builder"', 'aria-label="Flower builder" title="Flower builder"')
+    else:              # nothing is left in it, so it goes
+        cut('      <div class="pop pop-tools" id="tools">', '          </div></div></div>\n      </div>\n', keep_end=False)
 cut("/* ---------- design system (#design)", "function route(instant){")
 sub('    if(id === "design"){ B.plant = null; view.innerHTML = renderDesign(); bindDesign(); document.title = "Design system · Hoya Collection"; }\n    else if(id === "build"',
     '    if(id === "build"')
@@ -108,7 +114,7 @@ if not KEEP_BUILDER:
         '  if(/^#build/.test(location.hash)){ history.replaceState(null, "", "#" + location.hash.slice(1).replace(/^build-?/, "")); }\n'
         '  const id = location.hash.slice(1), p = DATA.find(x => slug(x.name) === id);')
     drop_line('document.getElementById("builder-link")')
-    drop_line('id="builder-link"')
+    if 'id="builder-link"' in h: drop_line('id="builder-link"')   # gone already when the Explore menu was cut
 
 # 5. saved designs written into the page (without the artifact's picture ids), and each plant worked out once
 ov = {d["plant"]: {k: v for k, v in d.items() if k != "images"} for d in json.load(open(designs, encoding="utf-8"))}
